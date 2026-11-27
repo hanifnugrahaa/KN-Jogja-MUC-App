@@ -293,7 +293,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
               {mode === 'request' && resetResult && (
                 <p className="trainer-recovery-note" role={resetResult === 'unregistered' ? 'alert' : 'status'}>
                   {resetResult === 'unregistered'
-                    ? 'No email was sent because this address is not registered in MUC. Contact the Coordinator Teacher.'
+                    ? 'No email was sent because this address is not registered in System. Contact the Coordinator Teacher.'
                     : 'Check your email for the password reset link. If it does not arrive, contact the Coordinator Teacher.'}
                 </p>
               )}
