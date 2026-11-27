@@ -27,7 +27,7 @@ import { assess, blankEvaluation, evaluationSchema } from '@/lib/evaluation'
 import type { Evaluation, SavedEvaluation, Thresholds } from '@/lib/evaluation'
 import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
-import { loadLocalSignature } from '@/lib/report-signature'
+import { loadLocalSignature, loadPublishedSignature } from '@/lib/report-signature'
 import { loadWorkspace, saveWorkspace } from '@/lib/storage'
 
 const pages = {
@@ -150,12 +150,15 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
     const request = ++previewRequest.current
     focusAfterClose.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const next: Report = reportData(evaluation, activeThresholds)
-    if (import.meta.env.DEV && portal && next.evaluatorRole) {
+    if (portal && next.evaluatorRole) {
       try {
-        const { data } = await portal.client.auth.getSession()
-        if (data.session) next.signature = await loadLocalSignature(data.session.access_token)
+        if (import.meta.env.DEV) {
+          const { data } = await portal.client.auth.getSession()
+          if (data.session) next.signature = await loadLocalSignature(data.session.access_token)
+        }
+        next.signature ??= await loadPublishedSignature(portal.client)
       } catch {
-        toast.error('Could not load the local signature. The preview is unsigned.')
+        toast.error('Could not load the signature. The preview is unsigned.')
       }
     }
     if (request === previewRequest.current) setReport(next)

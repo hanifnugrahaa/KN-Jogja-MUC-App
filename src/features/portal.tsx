@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Globe, LoaderCircle, LogIn } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from 'sonner'
@@ -13,6 +13,7 @@ import { recordSchema } from '@/lib/evaluation'
 import type { SavedEvaluation } from '@/lib/evaluation'
 import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
+import { loadPublishedSignature } from '@/lib/report-signature'
 import { EvaluationHistory } from './history'
 import { ReportPreview } from './report-preview'
 import App from '@/App'
@@ -84,6 +85,7 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
   const [records, setRecords] = useState<SavedEvaluation[]>()
   const [error, setError] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
+  const previewRequest = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -102,6 +104,19 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
     return () => { active = false }
   }, [client])
 
+  async function openPreview(row: SavedEvaluation) {
+    const request = ++previewRequest.current
+    const next: Report = reportData(row.evaluation, row.thresholds)
+    if (next.evaluatorRole) {
+      try {
+        next.signature = await loadPublishedSignature(client, row.id)
+      } catch {
+        toast.error('Could not load the signature. The preview is unsigned.')
+      }
+    }
+    if (request === previewRequest.current) setReport(next)
+  }
+
   if (navigating || (!records && !error)) return <PagePreloader />
 
   return (
@@ -116,9 +131,9 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
         </header>
         <h1>MUC Result</h1>
         {error ? <p className="public-results-error" role="alert">Could not load public evaluations. Please reload the page.</p>
-          : <EvaluationHistory records={records ?? []} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />}
+          : <EvaluationHistory records={records ?? []} onPreview={openPreview} />}
       </div>
-      <ReportPreview report={report} onClose={() => setReport(null)} />
+      <ReportPreview report={report} onClose={() => { previewRequest.current++; setReport(null) }} />
     </main>
   )
 }

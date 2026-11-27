@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 export type ReportSignature = { dataUrl: string; width: number; height: number }
 
 export async function loadLocalSignature(token: string): Promise<ReportSignature | undefined> {
@@ -37,4 +39,11 @@ export async function loadLocalSignature(token: string): Promise<ReportSignature
   } finally {
     image.close()
   }
+}
+
+
+export async function loadPublishedSignature(client: SupabaseClient, evaluationId?: string): Promise<ReportSignature | undefined> {
+  const { data, error } = await client.rpc('muc_report_signature', { evaluation_id: evaluationId ?? null })
+  if (error) throw error
+  return data ?? undefined
 }

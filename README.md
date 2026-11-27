@@ -31,4 +31,4 @@ The home page lists explicitly published evaluations without sign-in. Go to /tra
 
 Trainer drafts and saved history are stored in the current browser. Use Publish Evaluation from Evaluation History to make a public copy. Supervisor Notes are included only when selected. Update publication to refresh the public copy or Unpublish to remove it. Existing private shares remain private until published. SQL checks for isolation, publication, and revocation are in supabase/tests.
 
-To sign Mr Hanif's local reports, set MUC_SIGNATURE_PATH to the path of his PNG signature in .env.local. The development server serves it only to an authenticated trainer on loopback. The signature is not packaged into the deployment or added to public evaluation exports.
+To sign Mr Hanif's local reports, set MUC_SIGNATURE_PATH to the path of his PNG signature in .env.local. The development server serves it only to an authenticated trainer on loopback. PNG signatures stay outside the source repository. In production, the authorized signature is stored in Supabase and exposed only for published Mr Hanif reports or authenticated trainer previews.
