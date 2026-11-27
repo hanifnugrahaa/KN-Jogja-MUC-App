@@ -74,8 +74,7 @@ export async function createWord(report: Report) {
   }) : null
   const signoff = [
     paragraph('Supervisor Signature', { alignment, bold: true, after: signatureLine ? 60 : 365, keepNext: true }),
-    ...(signatureLine ? [signatureLine] : []),
-    paragraph('________________________________', { alignment, color: brand.muted, keepNext: true }),
+    signatureLine ?? paragraph('________________________________', { alignment, color: brand.muted, keepNext: true }),
     paragraph(report.evaluator, { alignment, bold: true, keepNext: !!report.evaluatorRole, after: 25 }),
     ...(report.evaluatorRole ? [paragraph(report.evaluatorRole, { alignment, color: brand.muted, size: 17 })] : []),
   ]

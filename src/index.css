@@ -346,7 +346,7 @@
 .paper-signature-block { width: min(220px, 100%); margin-left: auto; text-align: right; }
 .paper-signature { margin-top: 25px; padding-top: 6px; border-top: 1px solid var(--border); font-weight: 700; }
 .paper-signature-image { display: block; width: auto; max-width: 100%; max-height: 57px; margin: 7px 0 0 auto; }
-.paper-signature-image + .paper-signature { margin-top: 4px; }
+.paper-signature-image + .paper-signature { margin-top: 6px; padding-top: 0; border-top: 0; }
 .paper-signature-role { color: var(--muted-foreground); font-size: .78rem; }
 
 @media (max-width: 1200px) and (min-width: 1051px) {
@@ -414,9 +414,19 @@
 }
 .public-results .portal-light { opacity: .66; }
 .public-results-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   width: min(100%, 1080px);
   margin-inline: auto;
-  padding: 26px clamp(15px, 4vw, 38px) 48px;
+  padding: 26px clamp(15px, 4vw, 38px) 23px;
+}
+.public-results-credit {
+  margin-top: auto;
+  padding-top: 24px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: .8rem;
 }
 .public-results-header {
   display: flex;

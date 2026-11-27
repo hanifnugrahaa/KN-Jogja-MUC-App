@@ -158,6 +158,7 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
             })),
             onPage: (page) => setFilters((previous) => ({ ...previous, page })),
           }} />}
+        <footer className="public-results-credit">Made by Coordinator Teacher</footer>
       </div>
       <ReportPreview report={report} onClose={() => { previewRequest.current++; setReport(null) }} />
     </main>

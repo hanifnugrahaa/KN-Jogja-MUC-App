@@ -89,8 +89,9 @@ export async function createPdf(report: Report, fonts: Awaited<ReturnType<typeof
     const { width, height, dataUrl } = report.signature
     const scale = Math.min(42 / width, 15 / height)
     doc.addImage(dataUrl, 'PNG', right - width * scale, y + 3, width * scale, height * scale)
+  } else {
+    doc.setDrawColor(border).setLineWidth(0.35).line(right - 62, y + lineOffset, right, y + lineOffset)
   }
-  doc.setDrawColor(border).setLineWidth(0.35).line(right - 62, y + lineOffset, right, y + lineOffset)
   doc.text(evaluator, right, y + nameOffset, { align: 'right' })
   if (report.evaluatorRole) {
     doc.setFont(regularFont, 'normal').setFontSize(8).setTextColor(muted)
