@@ -1,8 +1,9 @@
-import { Copy, FileSearch, History, Pencil, Search, Share2, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, FileSearch, History, Pencil, Search, Share2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { assess, formatDate } from '@/lib/evaluation'
 import type { SavedEvaluation } from '@/lib/evaluation'
@@ -16,6 +17,13 @@ type PublicControls = {
   query: string; filters: ResultFilters; sort: ResultSort; page: number; total: number; pending: boolean
   onQuery: (query: string) => void; onSort: (column: ResultSortColumn) => void; onPage: (page: number) => void
   onApplyFilters: (filters: ResultFilters) => void
+}
+
+function pageItems(page: number, pages: number): (number | 'start' | 'end')[] {
+  if (pages <= 5) return Array.from({ length: pages }, (_, index) => index + 1)
+  if (page <= 3) return [1, 2, 3, 'end', pages]
+  if (page >= pages - 2) return [1, 'start', pages - 2, pages - 1, pages]
+  return [1, 'start', page, 'end', pages]
 }
 
 export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onDelete, onNew, onShare, publicControls }: {
@@ -33,11 +41,11 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
   return (
     <Card className="workspace-card history-card">
       <CardHeader className="history-tools">
-        <CardTitle>Saved Evaluations</CardTitle>
+        <CardTitle>Published Evaluations</CardTitle>
         <div className={publicControls ? 'public-results-tools' : undefined}>
           <div className="search">
             <Search size={17} />
-            <Input aria-label="Search evaluations" placeholder={publicControls ? 'Search teacher, module, or branch' : 'Search evaluations…'}
+            <Input aria-label="Search evaluations" placeholder={publicControls ? 'Search teacher, or module' : 'Search evaluations…'}
               value={query} maxLength={publicControls ? 120 : undefined}
               onChange={(event) => (publicControls?.onQuery ?? setLocalQuery)(event.target.value)} />
           </div>
@@ -94,20 +102,36 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
           </div>
         )}
         {publicControls && publicControls.total > 0 && (
-          <nav className="public-pagination" aria-label="Evaluation pages">
+          <div className="public-pagination">
             <span aria-live="polite">{publicControls.pending ? 'Updating results...' :
               'Showing ' + ((publicControls.page - 1) * PUBLIC_PAGE_SIZE + 1) + '-' +
               Math.min(publicControls.page * PUBLIC_PAGE_SIZE, publicControls.total) + ' of ' + publicControls.total}</span>
             {pages > 1 && (
-              <div className="public-pagination-actions">
-                <Button type="button" variant="outline" disabled={publicControls.pending || publicControls.page <= 1}
-                  onClick={() => publicControls.onPage(publicControls.page - 1)}>Previous</Button>
-                <span aria-label={'Page ' + publicControls.page + ' of ' + pages}>{publicControls.page} / {pages}</span>
-                <Button type="button" variant="outline" disabled={publicControls.pending || publicControls.page >= pages}
-                  onClick={() => publicControls.onPage(publicControls.page + 1)}>Next</Button>
-              </div>
+              <Pagination className="public-pagination-actions" aria-label="Evaluation pages">
+                <PaginationContent>
+                  <PaginationItem>
+                    <Button type="button" size="icon" variant="ghost" aria-label="Previous"
+                      disabled={publicControls.pending || publicControls.page <= 1}
+                      onClick={() => publicControls.onPage(publicControls.page - 1)}><ChevronLeft /></Button>
+                  </PaginationItem>
+                  {pageItems(publicControls.page, pages).map((item) => (
+                    <PaginationItem key={item}>
+                      {typeof item === 'number' ? (
+                        <Button type="button" size="icon" variant="ghost" aria-label={'Page ' + item}
+                          aria-current={item === publicControls.page ? 'page' : undefined} disabled={publicControls.pending}
+                          onClick={() => { if (item !== publicControls.page) publicControls.onPage(item) }}>{item}</Button>
+                      ) : <PaginationEllipsis />}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <Button type="button" size="icon" variant="ghost" aria-label="Next"
+                      disabled={publicControls.pending || publicControls.page >= pages}
+                      onClick={() => publicControls.onPage(publicControls.page + 1)}><ChevronRight /></Button>
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
-          </nav>
+          </div>
         )}
       </CardContent>
     </Card>

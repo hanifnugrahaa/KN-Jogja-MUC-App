@@ -742,8 +742,15 @@
   color: var(--muted-foreground);
   font-size: .8rem;
 }
-.public-pagination-actions { display: flex; align-items: center; gap: 7px; }
-.public-pagination button { height: 34px; }
+.public-pagination-actions { width: auto; margin-inline: 0; }
+.public-pagination button { width: 32px; height: 32px; }
+.public-pagination button[aria-current="page"] {
+  color: #e3f5ff;
+  background: #22557a;
+  border-color: #9ed7ff70;
+  font-weight: 700;
+}
+.public-pagination [data-slot="pagination-ellipsis"] { width: 24px; }
 @media (max-width: 740px) {
   .public-results-tools { width: 100%; }
   .public-pagination-actions { margin-left: auto; }
