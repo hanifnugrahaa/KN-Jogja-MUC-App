@@ -227,7 +227,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
         setPassword('')
       }
     } catch {
-      toast.error(mode === 'request' ? 'Could not send the password reset email. Try again later.'
+      toast.error(mode === 'request' ? 'Could not process the reset request. Try again later or contact the Coordinator Teacher.'
         : mode === 'recovery' ? 'Could not save the password. Choose a different password or request a new link.'
           : 'Could not sign in. Check your email and password.', { id: 'trainer-auth-error' })
     } finally {
@@ -282,9 +282,13 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
               <CardTitle><h1>{recovery ? 'Set Trainer Password' : mode === 'request' ? 'Reset Password' : 'Coordinator Teacher Login'}</h1></CardTitle>
             </CardHeader>
             <CardContent>
-              {mode === 'request' && sent ? (
-                <p role="status">If the account can receive reset emails, a password setup link will arrive shortly.</p>
-              ) : (
+              {mode === 'request' && (
+                <p className="trainer-recovery-note" role={sent ? 'status' : undefined}>
+                  {sent && <strong>Request received. </strong>}
+                  Reset links are only sent to registered email addresses. If your email is not registered or you do not receive a link, contact the Coordinator Teacher.
+                </p>
+              )}
+              {!(mode === 'request' && sent) && (
                 <form className="trainer-credentials" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
                   {!recovery && <>
                     <Label htmlFor="portal-email">Email address</Label>
