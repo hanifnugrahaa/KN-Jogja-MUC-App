@@ -16,10 +16,53 @@ import { ReportPreview } from './report-preview'
 import App from '@/App'
 
 export function Portal({ client }: { client: SupabaseClient }) {
+  return window.location.pathname.replace(/\/$/, '') === '/trainer'
+    ? <TrainerPortal client={client} />
+    : <PublicEvaluations client={client} />
+}
+
+function PublicEvaluations({ client }: { client: SupabaseClient }) {
+  const [records, setRecords] = useState<SavedEvaluation[]>()
+  const [error, setError] = useState(false)
+  const [report, setReport] = useState<Report | null>(null)
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      try {
+        const result = await client.rpc('muc_public_evaluations')
+        if (result.error) throw result.error
+        const evaluations = result.data.map((row: { id: string; shared_at: string; evaluation: unknown; thresholds: unknown }) =>
+          recordSchema.parse({ id: row.id, savedAt: new Date(row.shared_at).toISOString(), evaluation: row.evaluation, thresholds: row.thresholds }))
+        if (active) setRecords(evaluations)
+      } catch {
+        if (active) setError(true)
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [client])
+
+  return (
+    <main className="main-content max-w-5xl">
+      <header className="mb-6 flex items-center justify-between gap-4">
+        <img src={brand.logo} width={101} alt={brand.name} />
+        <Button variant="outline" asChild><a href="/trainer">Trainer Login</a></Button>
+      </header>
+      <h1 className="mb-4 text-3xl font-bold">Public Evaluations</h1>
+      {error ? <p role="alert">Could not load public evaluations. Please reload the page.</p>
+        : records ? <EvaluationHistory records={records} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />
+        : <p role="status">Loading evaluations?</p>}
+      <ReportPreview report={report} onClose={() => setReport(null)} />
+      <Toaster position="bottom-right" richColors />
+    </main>
+  )
+}
+
+function TrainerPortal({ client }: { client: SupabaseClient }) {
   const [user, setUser] = useState<User | null | undefined>(undefined)
-  const [access, setAccess] = useState<{ userId: string; trainer: boolean; records: SavedEvaluation[] }>()
+  const [access, setAccess] = useState<{ userId: string; trainer: boolean }>()
   const [failure, setFailure] = useState(false)
-  const [report, setReport] = useState<{ userId: string; data: Report } | null>(null)
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
@@ -36,18 +79,7 @@ export function Portal({ client }: { client: SupabaseClient }) {
       try {
         const role = await client.rpc('muc_is_trainer')
         if (role.error) throw role.error
-        const trainer = role.data === true
-        const records: SavedEvaluation[] = []
-        if (!trainer) {
-          const shared = await client.from('muc_shared_evaluations').select('id,evaluation,thresholds,shared_at').order('shared_at', { ascending: false })
-          if (shared.error) throw shared.error
-          for (const row of shared.data) {
-            records.push(recordSchema.parse({
-              id: row.id, savedAt: new Date(row.shared_at).toISOString(), evaluation: row.evaluation, thresholds: row.thresholds,
-            }))
-          }
-        }
-        if (active) setAccess({ userId: userId!, trainer, records })
+        if (active) setAccess({ userId: userId!, trainer: role.data === true })
       } catch {
         if (active) setFailure(true)
       }
@@ -61,7 +93,7 @@ export function Portal({ client }: { client: SupabaseClient }) {
     try {
       const { error } = await client.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
-        options: { emailRedirectTo: window.location.origin + window.location.pathname },
+        options: { emailRedirectTo: window.location.origin + '/trainer', shouldCreateUser: false },
       })
       if (error) throw error
       setSent(true)
@@ -80,7 +112,6 @@ export function Portal({ client }: { client: SupabaseClient }) {
     }
     setAccess(undefined)
     setFailure(false)
-    setReport(null)
     setSent(false)
   }
 
@@ -92,20 +123,20 @@ export function Portal({ client }: { client: SupabaseClient }) {
     <main className="main-content max-w-5xl">
       <header className="mb-6 flex items-center justify-between gap-4">
         <img src={brand.logo} width={101} alt={brand.name} />
-        {user && <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>}
+        <Button variant="outline" asChild><a href="/">Public Evaluations</a></Button>
       </header>
       {user === undefined || (user && !failure && access?.userId !== user.id) ? (
         <p role="status">Loading MUC…</p>
       ) : failure ? (
-        <p role="alert">Could not load the portal. Reload the page or sign in again.</p>
+        <div className="space-y-3"><p role="alert">Could not check trainer access.</p><Button variant="outline" onClick={() => void signOut()}>Sign out</Button></div>
       ) : user ? (
-        <>
-          <h1 className="mb-4 text-3xl font-bold">My Evaluations</h1>
-          <EvaluationHistory records={access?.records ?? []} onPreview={(row) => setReport({ userId: user.id, data: reportData(row.evaluation, row.thresholds) })} />
-        </>
+        <div className="space-y-3">
+          <p role="alert">This account does not have trainer access.</p>
+          <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
+        </div>
       ) : (
         <Card className="workspace-card mx-auto mt-12 max-w-md">
-          <CardHeader><CardTitle><h1>Sign in to MUC</h1></CardTitle></CardHeader>
+          <CardHeader><CardTitle><h1>Trainer Login</h1></CardTitle></CardHeader>
           <CardContent>
             {sent ? (
               <p role="status">Check your email for a sign-in link.</p>
@@ -121,7 +152,6 @@ export function Portal({ client }: { client: SupabaseClient }) {
           </CardContent>
         </Card>
       )}
-      <ReportPreview report={user && report?.userId === user.id ? report.data : null} onClose={() => setReport(null)} />
       <Toaster position="bottom-right" richColors />
     </main>
   )

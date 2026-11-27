@@ -11,5 +11,9 @@ for (const key of ['blue', 'navy', 'ink', 'muted', 'light', 'border'] as const) 
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{supabase ? <Portal client={supabase} /> : <App />}</StrictMode>,
+  <StrictMode>
+    {supabase ? <Portal client={supabase} /> : import.meta.env.DEV
+      ? <App />
+      : <main className="main-content"><p role="alert">MUC is not configured.</p></main>}
+  </StrictMode>,
 )

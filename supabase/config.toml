@@ -1,8 +1,8 @@
 project_id = "koding-next-muc"
 
 [auth]
-site_url = "https://koding-next-muc.lissomecoral4.chatgpt.site"
-additional_redirect_urls = ["http://localhost:5173/", "http://127.0.0.1:5173/"]
+site_url = "https://mucknjogja.vercel.app"
+additional_redirect_urls = ["https://mucknjogja.vercel.app/", "http://localhost:5173/", "http://127.0.0.1:5173/", "https://mucknjogja.vercel.app/trainer", "http://localhost:5173/trainer", "http://127.0.0.1:5173/trainer"]
 
 [auth.email]
 enable_confirmations = true

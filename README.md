@@ -1,4 +1,4 @@
-﻿# Koding Next MUC Evaluation
+# Koding Next MUC Evaluation
 
 An internal academic workspace for evaluating coding teacher candidates. The evaluation form, draft, history, and recommendation thresholds are stored in the current browser. The default center is Yogyakarta.
 
@@ -25,8 +25,8 @@ Copy .env.example to .env.local, set GEMINI_API_KEY to a key from Google AI Stud
 
 The endpoint runs with npm run dev and npm run preview. Static hosting of dist alone does not provide the endpoint. Shared production hosting requires a protected server on the same origin.
 
-## Teacher portal
+## Public evaluations and trainer access
 
-The MUC portal uses Supabase email magic links. Apply the migration in supabase/migrations, add the verified trainer email in lowercase to public.muc_trainers, and set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local or the build environment. Use the publishable key. Set the Supabase Auth site URL and redirect allowlist to the application address. Configure custom SMTP for teachers outside the Supabase organization before testing email delivery.
+The home page lists explicitly published evaluations without sign-in. Go to /trainer and use an authorized email to sign in. Apply the migrations in supabase/migrations, register the trainer email in public.muc_trainers, and set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in the environment. Add the /trainer URL to the Supabase Auth redirect allowlist for each deployed or local origin.
 
-Trainer drafts and history are stored in the current browser. From Evaluation History, select Share with Teacher to publish a read-only copy for the specified email address. Evaluator notes are shared only when selected. Local changes take effect in the teacher portal when the trainer updates sharing. Remove access to revoke the shared copy. SQL checks for teacher isolation and revocation are in supabase/tests/teacher_access.sql.
+Trainer drafts and saved history are stored in the current browser. Use Publish Evaluation from Evaluation History to make a public copy. Evaluator notes are included only when selected. Update publication to refresh the public copy or Unpublish to remove it. Existing private shares remain private until published. SQL checks for isolation, publication, and revocation are in supabase/tests.

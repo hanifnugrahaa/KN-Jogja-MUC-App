@@ -47,7 +47,7 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
                         {onEdit && <Button type="button" variant="ghost" size="icon" title="Edit" aria-label={'Edit ' + evaluation.candidate} onClick={() => onEdit(record)}><Pencil /></Button>}
                         {onDuplicate && <Button type="button" variant="ghost" size="icon" title="Duplicate" aria-label={'Duplicate ' + evaluation.candidate} onClick={() => onDuplicate(record)}><Copy /></Button>}
                         <Button type="button" variant="ghost" size="icon" title="Preview and export" aria-label={'Preview and export ' + evaluation.candidate} onClick={() => onPreview(record)}><FileSearch /></Button>
-                        {onShare && <Button type="button" variant="ghost" size="icon" title="Share with Teacher" aria-label={'Share with Teacher: ' + evaluation.candidate} onClick={() => onShare(record)}><Share2 /></Button>}
+                        {onShare && <Button type="button" variant="ghost" size="icon" title="Publish Evaluation" aria-label={'Publish Evaluation: ' + evaluation.candidate} onClick={() => onShare(record)}><Share2 /></Button>}
                         {onDelete && <Button type="button" variant="ghost" size="icon" className="delete-action" title="Delete" aria-label={'Delete ' + evaluation.candidate} onClick={() => onDelete(record)}><Trash2 /></Button>}
                       </div>
                     </TableCell>
@@ -59,8 +59,8 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
         ) : (
           <div className="empty-state">
             <span className="section-icon"><History /></span>
-            <h2>{records.length ? 'No matching evaluations' : onNew ? 'No saved evaluations yet' : 'No shared evaluations yet'}</h2>
-            <p>{records.length ? 'Try another candidate, topic, evaluator, or branch.' : onNew ? 'Complete and save an evaluation to see it here.' : 'Evaluations will appear here once your trainer shares them.'}</p>
+            <h2>{records.length ? 'No matching evaluations' : onNew ? 'No saved evaluations yet' : 'No public evaluations yet'}</h2>
+            <p>{records.length ? 'Try another candidate, topic, evaluator, or branch.' : onNew ? 'Complete and save an evaluation to see it here.' : 'Evaluations will appear here once a trainer publishes them.'}</p>
             {!records.length && onNew && <Button type="button" variant="outline" onClick={onNew}>Open evaluation form</Button>}
           </div>
         )}

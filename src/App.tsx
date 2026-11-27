@@ -174,12 +174,12 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   function deleteEvaluation(record: SavedEvaluation) {
     confirm({
       title: 'Delete this evaluation?',
-      description: 'The saved evaluation for ' + record.evaluation.candidate + ' will be permanently removed from this browser.' + (portal ? ' Teacher access will also be removed.' : ''),
+      description: 'The saved evaluation for ' + record.evaluation.candidate + ' will be permanently removed from this browser.' + (portal ? ' Any shared or published copy will also be removed.' : ''),
       action: 'Delete evaluation',
       run: async () => {
         if (portal) {
           const { error } = await portal.client.from('muc_shared_evaluations').delete().eq('id', record.id)
-          if (error) { toast.error('Could not remove teacher access. The evaluation was kept.'); return }
+          if (error) { toast.error('Could not remove the published or shared copy. The evaluation was kept.'); return }
         }
         const nextRecords = records.filter(({ id }) => record.id !== id)
         const nextEditingId = editingId === record.id ? null : editingId
@@ -262,7 +262,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                   <span>Storage unavailable</span>
                 </div>
               )}
-              {portal && <Button className="ml-auto" variant="outline" onClick={() => void portal.signOut()}>Sign out</Button>}
+              {portal && <div className="ml-auto flex gap-2"><Button variant="outline" className="hidden sm:inline-flex" asChild><a href="/">Public Evaluations</a></Button><Button variant="outline" onClick={() => void portal.signOut()}>Sign out</Button></div>}
 
             </div>
           </header>
