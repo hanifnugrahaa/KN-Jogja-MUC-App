@@ -1,4 +1,4 @@
-import { ChevronLeft, Eye, EyeOff, LoaderCircle } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, LoaderCircle, LogIn } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
@@ -99,9 +99,11 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
     <main className="main-content max-w-5xl">
       <header className="mb-6 flex items-center justify-between gap-4">
         <img src={brand.logo} width={101} alt={brand.name} />
-        <Button variant="outline" asChild><a href="/trainer">Coordinator Teacher Login</a></Button>
+        <Button variant="outline" className="public-dashboard-login" asChild>
+          <a href="/trainer"><LogIn aria-hidden="true" />Dashboard Login</a>
+        </Button>
       </header>
-      <h1 className="mb-4 text-3xl font-bold">Public Evaluations</h1>
+      <h1 className="mb-4 text-center text-3xl font-bold">Public Evaluations</h1>
       {error ? <p role="alert">Could not load public evaluations. Please reload the page.</p>
         : <EvaluationHistory records={records ?? []} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />}
       <ReportPreview report={report} onClose={() => setReport(null)} />
