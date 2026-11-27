@@ -486,7 +486,6 @@
 .public-results .section-icon { background: #9dd2ff22; color: #b1e2ff; }
 
 @media (max-width: 740px) {
-  .public-results .search { width: 100%; }
   .public-results .history-table td, .public-results .history-table th { padding-inline: 8px; }
   .public-results .public-report-control span { display: none; }
   .public-results .history-table { min-width: 0; }
@@ -719,9 +718,10 @@
 .public-results-tools {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  min-width: 0;
   gap: 8px;
 }
+.public-results-tools .search { flex: 1 1 275px; min-width: 0; }
 .public-results .public-filter-trigger, .public-pagination button {
   height: 39px;
   border-color: var(--border);
@@ -746,7 +746,6 @@
 .public-pagination button { height: 34px; }
 @media (max-width: 740px) {
   .public-results-tools { width: 100%; }
-  .public-results-tools .search { flex: 1 1 180px; min-width: 0; }
   .public-pagination-actions { margin-left: auto; }
 }
 
