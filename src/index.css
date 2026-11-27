@@ -491,7 +491,10 @@
   .public-results .public-report-control span { display: none; }
   .public-results .history-table { min-width: 0; }
   .public-results .history-table td:first-child { min-width: 0; }
-  .public-results .history-table :is(th, td):is(:nth-child(2), :nth-child(4)) { display: none; }
+  .public-results .history-table :is(th, td):nth-child(4) { display: none; }
+  .public-results .history-table td:nth-child(2) { white-space: normal; overflow-wrap: anywhere; }
+  .public-results .history-table .public-sort-full, .public-results .public-actions-label { display: none; }
+  .public-results .history-table .public-sort-short { display: inline; }
 }
 
 .portal-surface {
@@ -719,13 +722,13 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.public-results .public-sort-trigger, .public-pagination button {
+.public-results .public-filter-trigger, .public-pagination button {
   height: 39px;
   border-color: var(--border);
   color: var(--foreground);
   background: #06192d8c;
 }
-.public-results .public-sort-trigger:hover, .public-pagination button:not(:disabled):hover {
+.public-results .public-filter-trigger:hover, .public-pagination button:not(:disabled):hover {
   background: #194569;
   color: var(--foreground);
 }
@@ -745,4 +748,26 @@
   .public-results-tools { width: 100%; }
   .public-results-tools .search { flex: 1 1 180px; min-width: 0; }
   .public-pagination-actions { margin-left: auto; }
+}
+
+
+.public-sort-heading { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-align: left; }
+.public-sort-heading svg { color: #a8d8fb; flex: none; }
+.public-sort-heading:hover { color: white; }
+.public-sort-short { display: none; }
+.public-filter-count {
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #bce3ff;
+  color: #112e47;
+  font-size: .7rem;
+  font-weight: 720;
+}
+.results-filter-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.results-filter-dates input { min-width: 0; }
+@media (max-width: 400px) {
+  .public-results .history-table td, .public-results .history-table th { padding-inline: 5px; }
 }

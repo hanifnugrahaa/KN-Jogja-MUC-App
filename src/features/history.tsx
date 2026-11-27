@@ -3,17 +3,19 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { assess, formatDate } from '@/lib/evaluation'
 import type { SavedEvaluation } from '@/lib/evaluation'
 import { RecommendationBadge } from './summary'
+import { ResultFiltersDialog, ResultSortHeading } from './result-controls'
+import type { ResultFilters, ResultSort, ResultSortColumn } from './result-controls'
 
 export const PUBLIC_PAGE_SIZE = 5
 
 type PublicControls = {
-  query: string; oldest: boolean; page: number; total: number; pending: boolean
-  onQuery: (query: string) => void; onSort: (oldest: boolean) => void; onPage: (page: number) => void
+  query: string; filters: ResultFilters; sort: ResultSort; page: number; total: number; pending: boolean
+  onQuery: (query: string) => void; onSort: (column: ResultSortColumn) => void; onPage: (page: number) => void
+  onApplyFilters: (filters: ResultFilters) => void
 }
 
 export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onDelete, onNew, onShare, publicControls }: {
@@ -26,7 +28,7 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
   const matches = publicControls ? records : records.filter(({ evaluation }) =>
     [evaluation.candidate, evaluation.topic, evaluation.evaluator, evaluation.branch].some((value) => value.toLowerCase().includes(term)),
   )
-  const noMatches = publicControls ? !!term : records.length > 0
+  const noMatches = publicControls ? !!term || Object.values(publicControls.filters).some(Boolean) : records.length > 0
   const pages = publicControls ? Math.ceil(publicControls.total / PUBLIC_PAGE_SIZE) : 0
   return (
     <Card className="workspace-card history-card">
@@ -39,22 +41,24 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
               value={query} maxLength={publicControls ? 120 : undefined}
               onChange={(event) => (publicControls?.onQuery ?? setLocalQuery)(event.target.value)} />
           </div>
-          {publicControls && (
-            <Select value={publicControls.oldest ? 'oldest' : 'latest'} onValueChange={(value) => publicControls.onSort(value === 'oldest')}>
-              <SelectTrigger className="public-sort-trigger" aria-label="Sort by evaluation date"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="latest">Newest first</SelectItem>
-                <SelectItem value="oldest">Oldest first</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          {publicControls && <ResultFiltersDialog value={publicControls.filters} onApply={publicControls.onApplyFilters} />}
         </div>
       </CardHeader>
       <CardContent aria-busy={publicControls?.pending || undefined}>
         {matches.length ? (
           <Table className="history-table">
             <TableHeader>
-              <TableRow><TableHead>Candidate / Topic</TableHead><TableHead>Evaluation Date</TableHead><TableHead>Score</TableHead><TableHead>Recommendation</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+              <TableRow>
+                {publicControls ? <>
+                  <ResultSortHeading column="teacher" label="Teacher Name" shortLabel="Teacher" sort={publicControls.sort} onSort={publicControls.onSort} />
+                  <ResultSortHeading column="date" label="Evaluation Date" shortLabel="Date" sort={publicControls.sort} onSort={publicControls.onSort} />
+                  <ResultSortHeading column="score" label="Score" sort={publicControls.sort} onSort={publicControls.onSort} />
+                </> : <>
+                  <TableHead>Candidate / Topic</TableHead><TableHead>Evaluation Date</TableHead><TableHead>Score</TableHead>
+                </>}
+                <TableHead>Recommendation</TableHead>
+                <TableHead className="text-right"><span className={publicControls ? 'public-actions-label' : undefined}>Actions</span></TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
               {matches.map((record) => {
@@ -84,7 +88,7 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
           <div className="empty-state">
             <span className="section-icon"><History /></span>
             <h2>{noMatches ? 'No matching evaluations' : onNew ? 'No saved evaluations yet' : 'No public evaluations yet'}</h2>
-            {noMatches ? <p>Try another teacher, module, supervisor, or branch.</p>
+            {noMatches ? <p>{publicControls ? 'Try another search or adjust the filters.' : 'Try another teacher, module, supervisor, or branch.'}</p>
               : onNew && <p>Complete and save an evaluation to see it here.</p>}
             {!records.length && onNew && <Button type="button" variant="outline" onClick={onNew}>Open evaluation form</Button>}
           </div>

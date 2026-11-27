@@ -15,6 +15,8 @@ import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
 import { loadPublishedSignature } from '@/lib/report-signature'
 import { EvaluationHistory, PUBLIC_PAGE_SIZE } from './history'
+import { emptyResultFilters } from './result-controls'
+import type { ResultSort } from './result-controls'
 import { ReportPreview } from './report-preview'
 import App from '@/App'
 
@@ -82,7 +84,9 @@ export function Portal({ client }: { client: SupabaseClient }) {
 }
 
 function PublicEvaluations({ client, navigating }: { client: SupabaseClient; navigating: boolean }) {
-  const [filters, setFilters] = useState({ query: '', oldest: false, page: 1 })
+  const [filters, setFilters] = useState({
+    query: '', page: 1, filters: emptyResultFilters, sort: { column: 'date', descending: true } as ResultSort,
+  })
   const [result, setResult] = useState<{ filters: typeof filters; records: SavedEvaluation[]; total: number }>()
   const [error, setError] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
@@ -92,8 +96,11 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
     let active = true
     async function load() {
       try {
-        const response = await client.rpc('muc_public_evaluations_page', {
-          page_number: filters.page, search_text: filters.query, oldest_first: filters.oldest,
+        const response = await client.rpc('muc_public_evaluations_filtered', {
+          page_number: filters.page, search_text: filters.query, teacher_name: filters.filters.teacher,
+          from_date: filters.filters.from || null, to_date: filters.filters.to || null,
+          recommendation_filter: filters.filters.recommendation,
+          sort_column: filters.sort.column, sort_descending: filters.sort.descending,
         })
         if (response.error) throw response.error
         const records = response.data.rows.map((row: { id: string; shared_at: string; evaluation: unknown; thresholds: unknown }) =>
@@ -144,7 +151,11 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
           : <EvaluationHistory records={result?.records ?? []} onPreview={openPreview} publicControls={{
             ...filters, page: result?.filters.page ?? 1, total: result?.total ?? 0, pending: result?.filters !== filters,
             onQuery: (query) => setFilters((previous) => ({ ...previous, query, page: 1 })),
-            onSort: (oldest) => setFilters((previous) => ({ ...previous, oldest, page: 1 })),
+            onApplyFilters: (value) => setFilters((previous) => ({ ...previous, filters: value, page: 1 })),
+            onSort: (column) => setFilters((previous) => ({
+              ...previous, page: 1,
+              sort: { column, descending: previous.sort.column === column ? !previous.sort.descending : column !== 'teacher' },
+            })),
             onPage: (page) => setFilters((previous) => ({ ...previous, page })),
           }} />}
       </div>
