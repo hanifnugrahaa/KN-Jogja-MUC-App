@@ -64,10 +64,19 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
   const [access, setAccess] = useState<{ userId: string; trainer: boolean }>()
   const [failure, setFailure] = useState(false)
   const [email, setEmail] = useState('')
-  const [sending, setSending] = useState(false)
+  const [password, setPassword] = useState('')
+  const [mode, setMode] = useState<'login' | 'request' | 'recovery'>('login')
+  const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
   useEffect(() => {
-    const { data } = client.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null))
+    const { data } = client.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setMode('recovery')
+      if (event === 'SIGNED_OUT') {
+        setMode('login')
+        setPassword('')
+      }
+      setUser(session?.user ?? null)
+    })
     return () => data.subscription.unsubscribe()
   }, [client])
 
@@ -88,19 +97,32 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
     return () => { active = false }
   }, [client, userId])
 
-  async function sendLink() {
-    setSending(true)
+  async function submitCredentials() {
+    setBusy(true)
     try {
-      const { error } = await client.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: { emailRedirectTo: window.location.origin + '/trainer', shouldCreateUser: false },
-      })
-      if (error) throw error
-      setSent(true)
+      if (mode === 'request') {
+        const { error } = await client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+          redirectTo: window.location.origin + '/trainer',
+        })
+        if (error) throw error
+        setSent(true)
+      } else if (mode === 'recovery') {
+        const { error } = await client.auth.updateUser({ password })
+        if (error) throw error
+        setPassword('')
+        setMode('login')
+        toast.success('Password saved')
+      } else {
+        const { error } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+        if (error) throw error
+        setPassword('')
+      }
     } catch {
-      toast.error('Could not send the sign-in link. Check the email address or try again later.')
+      toast.error(mode === 'request' ? 'Could not send the password reset email. Try again later.'
+        : mode === 'recovery' ? 'Could not save the password. Choose a different password or request a new link.'
+        : 'Could not sign in. Check your email and password.')
     } finally {
-      setSending(false)
+      setBusy(false)
     }
   }
 
@@ -115,7 +137,9 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
     setSent(false)
   }
 
-  if (user && access?.userId === user.id && access.trainer) {
+  const trainer = !!user && access?.userId === user.id && access.trainer
+  const recovery = trainer && mode === 'recovery'
+  if (trainer && !recovery) {
     return <App portal={{ client, signOut }} />
   }
 
@@ -129,26 +153,39 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
         <p role="status">Loading MUC…</p>
       ) : failure ? (
         <div className="space-y-3"><p role="alert">Could not check trainer access.</p><Button variant="outline" onClick={() => void signOut()}>Sign out</Button></div>
-      ) : user ? (
+      ) : user && !recovery ? (
         <div className="space-y-3">
           <p role="alert">This account does not have trainer access.</p>
           <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
         </div>
       ) : (
         <Card className="workspace-card mx-auto mt-12 max-w-md">
-          <CardHeader><CardTitle><h1>Trainer Login</h1></CardTitle></CardHeader>
+          <CardHeader><CardTitle><h1>{recovery ? 'Set Trainer Password' : 'Trainer Login'}</h1></CardTitle></CardHeader>
           <CardContent>
-            {sent ? (
-              <p role="status">Check your email for a sign-in link.</p>
+            {mode === 'request' && sent ? (
+              <p role="status">If the account can receive reset emails, a password setup link will arrive shortly.</p>
             ) : (
-              <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); void sendLink() }}>
-                <Label htmlFor="portal-email">Email address</Label>
-                <Input id="portal-email" type="email" autoComplete="email" maxLength={254} required value={email}
-                  onChange={(event) => setEmail(event.target.value)} />
-                <Button disabled={sending} type="submit">{sending ? 'Sending…' : 'Send sign-in link'}</Button>
+              <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
+                {!recovery && <>
+                  <Label htmlFor="portal-email">Email address</Label>
+                  <Input id="portal-email" type="email" autoComplete="username" maxLength={254} required value={email}
+                    onChange={(event) => setEmail(event.target.value)} />
+                </>}
+                {mode !== 'request' && <>
+                  <Label htmlFor="portal-password">{recovery ? 'New password' : 'Password'}</Label>
+                  <Input id="portal-password" type="password" autoComplete={recovery ? 'new-password' : 'current-password'}
+                    minLength={recovery ? 8 : undefined} required value={password}
+                    onChange={(event) => setPassword(event.target.value)} />
+                </>}
+                <Button disabled={busy} type="submit">{busy ? 'Please wait?'
+                  : recovery ? 'Save password' : mode === 'request' ? 'Send password reset link' : 'Sign in'}</Button>
               </form>
             )}
-            {sent && <Button className="mt-3" variant="outline" onClick={() => setSent(false)}>Use another email</Button>}
+            {!recovery && <Button className="mt-3" variant="link" disabled={busy} onClick={() => {
+              setMode(mode === 'request' ? 'login' : 'request')
+              setPassword('')
+              setSent(false)
+            }}>{mode === 'request' ? 'Back to sign in' : 'Set or reset password'}</Button>}
           </CardContent>
         </Card>
       )}

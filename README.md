@@ -27,6 +27,6 @@ The endpoint runs with npm run dev and npm run preview. Static hosting of dist a
 
 ## Public evaluations and trainer access
 
-The home page lists explicitly published evaluations without sign-in. Go to /trainer and use an authorized email to sign in. Apply the migrations in supabase/migrations, register the trainer email in public.muc_trainers, and set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in the environment. Add the /trainer URL to the Supabase Auth redirect allowlist for each deployed or local origin.
+The home page lists explicitly published evaluations without sign-in. Go to /trainer and sign in with the authorized account?s email and Supabase Auth password. Use Set or reset password to create a password for an existing account. Apply the migrations in supabase/migrations, register the trainer email in public.muc_trainers, and set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in the environment. Add the /trainer URL to the Supabase Auth redirect allowlist for each deployed or local origin.
 
 Trainer drafts and saved history are stored in the current browser. Use Publish Evaluation from Evaluation History to make a public copy. Evaluator notes are included only when selected. Update publication to refresh the public copy or Unpublish to remove it. Existing private shares remain private until published. SQL checks for isolation, publication, and revocation are in supabase/tests.
