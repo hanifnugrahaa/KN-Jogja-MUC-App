@@ -60,7 +60,8 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
           <div className="empty-state">
             <span className="section-icon"><History /></span>
             <h2>{records.length ? 'No matching evaluations' : onNew ? 'No saved evaluations yet' : 'No public evaluations yet'}</h2>
-            <p>{records.length ? 'Try another candidate, topic, evaluator, or branch.' : onNew ? 'Complete and save an evaluation to see it here.' : 'Evaluations will appear here once a trainer publishes them.'}</p>
+            {records.length ? <p>Try another candidate, topic, evaluator, or branch.</p>
+              : onNew && <p>Complete and save an evaluation to see it here.</p>}
             {!records.length && onNew && <Button type="button" variant="outline" onClick={onNew}>Open evaluation form</Button>}
           </div>
         )}
