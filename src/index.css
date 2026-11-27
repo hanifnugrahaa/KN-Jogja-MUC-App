@@ -334,3 +334,154 @@
   overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap;
   font-size: .8rem; color: var(--muted-foreground);
 }
+
+.trainer-gate {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100dvh;
+  overflow: clip;
+  color: #f4faff;
+  background:
+    radial-gradient(ellipse at 72% 65%, #123d69 0%, transparent 48%),
+    radial-gradient(ellipse at 18% 36%, #0b335a 0%, transparent 44%),
+    #06192e;
+}
+.trainer-light {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.trainer-beam {
+  position: absolute;
+  left: -22%;
+  top: 43%;
+  width: 144%;
+  height: clamp(190px, 32vw, 460px);
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 70% 100%, #b0f3ff 0%, #54c4fa 6%, transparent 35%),
+    radial-gradient(ellipse at 25% 98%, #2387f8 0%, #4376fa 12%, transparent 41%),
+    radial-gradient(ellipse at 50% 105%, #1d7aff 0%, transparent 50%);
+  border-bottom: 2px solid #9feaffb8;
+  box-shadow: 0 11px 38px -19px #68dcff;
+  transform-origin: 50% 50%;
+  animation: trainer-light-sweep 11s ease-in-out infinite;
+}
+.trainer-beam-main::after {
+  content: '';
+  position: absolute;
+  inset: 28% 0 -8%;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 67% 83%, #44c6fc9c, #116ffc45 24%, transparent 62%);
+  filter: blur(22px);
+}
+.trainer-beam-echo {
+  top: 31%;
+  height: clamp(220px, 38vw, 540px);
+  border-color: #59aaff8a;
+  filter: blur(9px);
+  opacity: .56;
+  animation-direction: reverse;
+  animation-duration: 16s;
+  animation-delay: -5s;
+}
+@keyframes trainer-light-sweep {
+  0%, 100% { transform: translate3d(-8%, -19%, 0) rotate(-11deg) scaleX(1.06); opacity: .78; }
+  33% { transform: translate3d(7%, -32%, 0) rotate(4deg) scaleX(.95); opacity: .95; }
+  67% { transform: translate3d(11%, -5%, 0) rotate(-5deg) scaleX(1.04); opacity: .57; }
+}
+.trainer-light[data-paused="true"] .trainer-beam { animation-play-state: paused; }
+.trainer-topbar {
+  width: min(100%, 1480px);
+  margin-inline: auto;
+  padding: 24px clamp(16px, 4vw, 55px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.trainer-brand {
+  background: #f4f9ff;
+  border-radius: .55rem;
+  padding: 7px 10px;
+}
+.trainer-brand img { display: block; height: auto; }
+.trainer-topbar [data-slot="button"] {
+  background: #0b2440b5;
+  color: #f4faff;
+  border-color: #b8dbfa54;
+  min-height: 38px;
+  padding: 0 12px;
+}
+.trainer-topbar [data-slot="button"]:hover { background: #204e77; }
+.trainer-gate-body {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 22px 16px 84px;
+}
+.trainer-glass, .trainer-status {
+  --card-spacing: clamp(20px, 5vw, 32px);
+  width: min(100%, 410px);
+  color: #f4faff;
+  background: linear-gradient(145deg, #1a3a58eb, #0a2038e0);
+  border: 1px solid #b0d9f950;
+  border-radius: 1.25rem;
+  backdrop-filter: blur(24px);
+  box-shadow: inset 0 1px 0 #e0f3ff21, 0 20px 74px #020b1680;
+}
+.trainer-status { padding: 22px; }
+.trainer-card-heading { gap: 8px; }
+.trainer-card-heading h1 {
+  font: 760 clamp(1.52rem, 4vw, 1.85rem)/1.2 var(--font-heading);
+  letter-spacing: -.035em;
+}
+.trainer-card-heading p { color: #c3d9ee; font-size: .9rem; }
+.trainer-lock {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: .78rem;
+  color: #d2f4ff;
+  background: #3ba3e735;
+  border: 1px solid #b5e7ff45;
+  margin-bottom: 5px;
+}
+.trainer-credentials { display: grid; gap: 9px; }
+.trainer-credentials label { color: #e7f5ff; }
+.trainer-credentials input {
+  min-height: 45px;
+  margin-bottom: 7px;
+  background: #071a30c9;
+  border-color: #a9ccf059;
+  color: #f4faff;
+  padding-inline: 12px;
+  color-scheme: dark;
+}
+.trainer-credentials input:is(:focus-visible, :hover) { border-color: #8bcdf7; }
+.trainer-submit {
+  min-height: 44px;
+  margin-top: 4px;
+  font-weight: 680;
+  background: #d5efff;
+  color: #082947;
+}
+.trainer-submit:hover { background: #f0faff; }
+.trainer-reset { margin-top: 11px; color: #c5e9ff; padding-inline: 0; }
+.trainer-motion {
+  position: absolute;
+  bottom: 18px;
+  right: clamp(16px, 4vw, 55px);
+  color: #d9efff;
+  border-color: #a9ccf040;
+}
+.trainer-motion:hover { background: #163e62; color: white; }
+@media (prefers-reduced-motion: reduce) {
+  .trainer-beam { animation: none; transform: translateY(-20%) rotate(-7deg); }
+  .trainer-motion { display: none; }
+}

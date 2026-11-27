@@ -1,3 +1,4 @@
+import { ChevronLeft, LockKeyhole, Pause, Play } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from 'sonner'
@@ -68,6 +69,7 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
   const [mode, setMode] = useState<'login' | 'request' | 'recovery'>('login')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
+  const [motionPaused, setMotionPaused] = useState(false)
   useEffect(() => {
     const { data } = client.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setMode('recovery')
@@ -144,28 +146,39 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
   }
 
   return (
-    <main className="main-content max-w-5xl">
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <img src={brand.logo} width={101} alt={brand.name} />
-        <Button variant="outline" asChild><a href="/">Public Evaluations</a></Button>
+    <main className="trainer-gate">
+      <div className="trainer-light" aria-hidden="true" data-paused={motionPaused}>
+        <div className="trainer-beam trainer-beam-main" />
+        <div className="trainer-beam trainer-beam-echo" />
+      </div>
+      <header className="trainer-topbar">
+        <a href="/" className="trainer-brand" aria-label="Koding Next home">
+          <img src={brand.logo} width={83} alt={brand.name} />
+        </a>
+        <Button variant="outline" asChild><a href="/"><ChevronLeft /> Public Evaluations</a></Button>
       </header>
+      <div className="trainer-gate-body">
       {user === undefined || (user && !failure && access?.userId !== user.id) ? (
         <p role="status">Loading MUC…</p>
       ) : failure ? (
-        <div className="space-y-3"><p role="alert">Could not check trainer access.</p><Button variant="outline" onClick={() => void signOut()}>Sign out</Button></div>
+        <div className="trainer-status space-y-3"><p role="alert">Could not check trainer access.</p><Button variant="outline" onClick={() => void signOut()}>Sign out</Button></div>
       ) : user && !recovery ? (
-        <div className="space-y-3">
+        <div className="trainer-status space-y-3">
           <p role="alert">This account does not have trainer access.</p>
           <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
         </div>
       ) : (
-        <Card className="workspace-card mx-auto mt-12 max-w-md">
-          <CardHeader><CardTitle><h1>{recovery ? 'Set Trainer Password' : 'Trainer Login'}</h1></CardTitle></CardHeader>
+        <Card className="trainer-glass">
+          <CardHeader className="trainer-card-heading">
+            <span className="trainer-lock" aria-hidden="true"><LockKeyhole size={21} /></span>
+            <CardTitle><h1>{recovery ? 'Set Trainer Password' : mode === 'request' ? 'Reset Password' : 'Trainer Login'}</h1></CardTitle>
+            {mode === 'login' && <p>Sign in to manage MUC evaluations.</p>}
+          </CardHeader>
           <CardContent>
             {mode === 'request' && sent ? (
               <p role="status">If the account can receive reset emails, a password setup link will arrive shortly.</p>
             ) : (
-              <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
+              <form className="trainer-credentials" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
                 {!recovery && <>
                   <Label htmlFor="portal-email">Email address</Label>
                   <Input id="portal-email" type="email" autoComplete="username" maxLength={254} required value={email}
@@ -177,11 +190,11 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
                     minLength={recovery ? 8 : undefined} required value={password}
                     onChange={(event) => setPassword(event.target.value)} />
                 </>}
-                <Button disabled={busy} type="submit">{busy ? 'Please wait?'
+                <Button className="trainer-submit" disabled={busy} type="submit">{busy ? 'Please wait?'
                   : recovery ? 'Save password' : mode === 'request' ? 'Send password reset link' : 'Sign in'}</Button>
               </form>
             )}
-            {!recovery && <Button className="mt-3" variant="link" disabled={busy} onClick={() => {
+            {!recovery && <Button className="trainer-reset" variant="link" disabled={busy} onClick={() => {
               setMode(mode === 'request' ? 'login' : 'request')
               setPassword('')
               setSent(false)
@@ -189,6 +202,12 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
           </CardContent>
         </Card>
       )}
+      </div>
+      <Button className="trainer-motion" variant="ghost" size="icon" type="button"
+        aria-label={motionPaused ? 'Resume background animation' : 'Pause background animation'}
+        onClick={() => setMotionPaused(!motionPaused)}>
+        {motionPaused ? <Play /> : <Pause />}
+      </Button>
       <Toaster position="bottom-right" richColors />
     </main>
   )
