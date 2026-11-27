@@ -1,4 +1,4 @@
-import { ChevronLeft, Eye, EyeOff, LoaderCircle, LogIn } from 'lucide-react'
+import { Eye, EyeOff, Globe, LoaderCircle, LogIn } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
@@ -30,6 +30,15 @@ function PagePreloader() {
         <span className="sr-only">Loading MUC</span>
       </div>
     </main>
+  )
+}
+
+function PortalBackdrop() {
+  return (
+    <div className="portal-light" aria-hidden="true">
+      <div className="trainer-beam trainer-beam-main" />
+      <div className="trainer-beam trainer-beam-echo" />
+    </div>
   )
 }
 
@@ -96,16 +105,19 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
   if (navigating || (!records && !error)) return <PagePreloader />
 
   return (
-    <main className="main-content max-w-5xl">
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <img src={brand.logo} width={101} alt={brand.name} />
-        <Button variant="outline" className="public-dashboard-login" asChild>
-          <a href="/trainer"><LogIn aria-hidden="true" />Dashboard Login</a>
-        </Button>
-      </header>
-      <h1 className="mb-4 text-center text-3xl font-bold">Public Evaluations</h1>
-      {error ? <p role="alert">Could not load public evaluations. Please reload the page.</p>
-        : <EvaluationHistory records={records ?? []} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />}
+    <main className="portal-surface public-results">
+      <PortalBackdrop />
+      <div className="public-results-inner">
+        <header className="public-results-header">
+          <img className="public-results-logo" src={brand.logo} width={94} height={43} alt={brand.name} />
+          <Button variant="outline" className="public-dashboard-login" asChild>
+            <a href="/trainer"><LogIn aria-hidden="true" />Log In</a>
+          </Button>
+        </header>
+        <h1>MUC Result</h1>
+        {error ? <p className="public-results-error" role="alert">Could not load public evaluations. Please reload the page.</p>
+          : <EvaluationHistory records={records ?? []} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />}
+      </div>
       <ReportPreview report={report} onClose={() => setReport(null)} />
     </main>
   )
@@ -175,7 +187,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
     } catch {
       toast.error(mode === 'request' ? 'Could not send the password reset email. Try again later.'
         : mode === 'recovery' ? 'Could not save the password. Choose a different password or request a new link.'
-        : 'Could not sign in. Check your email and password.', { id: 'trainer-auth-error' })
+          : 'Could not sign in. Check your email and password.', { id: 'trainer-auth-error' })
     } finally {
       setBusy(false)
     }
@@ -193,7 +205,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
   }
 
   if (navigating || user === undefined || (busy && mode !== 'request')
-      || (user && !failure && access?.userId !== user.id)) {
+    || (user && !failure && access?.userId !== user.id)) {
     return <PagePreloader />
   }
 
@@ -204,13 +216,12 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
   }
 
   return (
-    <main className="trainer-gate">
-      <div className="trainer-light" aria-hidden="true">
-        <div className="trainer-beam trainer-beam-main" />
-        <div className="trainer-beam trainer-beam-echo" />
-      </div>
+    <main className="portal-surface trainer-gate">
+      <PortalBackdrop />
       <header className="trainer-topbar">
-        <Button variant="outline" asChild><a href="/"><ChevronLeft /> Public Evaluations</a></Button>
+        <Button variant="ghost" className="trainer-return" asChild>
+          <a href="/" aria-label="Public Evaluations"><Globe aria-hidden="true" />Evaluations</a>
+        </Button>
       </header>
       <div className="trainer-gate-body">
         {user === undefined || (user && !failure && access?.userId !== user.id) ? (

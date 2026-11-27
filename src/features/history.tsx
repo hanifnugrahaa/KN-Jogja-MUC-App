@@ -40,13 +40,13 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
                   <TableRow key={record.id}>
                     <TableCell><strong>{evaluation.candidate}</strong><div className="table-subtitle">{evaluation.topic}</div></TableCell>
                     <TableCell>{formatDate(evaluation.date)}<div className="table-subtitle">{evaluation.branch}</div></TableCell>
-                    <TableCell>{result.score}/100</TableCell>
+                    <TableCell><span className="history-score"><strong>{result.score}</strong><small>/100</small></span></TableCell>
                     <TableCell><RecommendationBadge value={result.recommendation} /></TableCell>
                     <TableCell>
                       <div className="history-actions">
                         {onEdit && <Button type="button" variant="ghost" size="icon" title="Edit" aria-label={'Edit ' + evaluation.candidate} onClick={() => onEdit(record)}><Pencil /></Button>}
                         {onDuplicate && <Button type="button" variant="ghost" size="icon" title="Duplicate" aria-label={'Duplicate ' + evaluation.candidate} onClick={() => onDuplicate(record)}><Copy /></Button>}
-                        <Button type="button" variant="ghost" size="icon" title="Preview and export" aria-label={'Preview and export ' + evaluation.candidate} onClick={() => onPreview(record)}><FileSearch /></Button>
+                        <Button type="button" variant="ghost" size="icon" title="Preview and export" aria-label={'Preview and export ' + evaluation.candidate} onClick={() => onPreview(record)} className={!onNew ? "public-report-control" : undefined}><FileSearch aria-hidden="true" />{!onNew && <span>Report</span>}</Button>
                         {onShare && <Button type="button" variant="ghost" size="icon" title="Publish Evaluation" aria-label={'Publish Evaluation: ' + evaluation.candidate} onClick={() => onShare(record)}><Share2 /></Button>}
                         {onDelete && <Button type="button" variant="ghost" size="icon" className="delete-action" title="Delete" aria-label={'Delete ' + evaluation.candidate} onClick={() => onDelete(record)}><Trash2 /></Button>}
                       </div>
