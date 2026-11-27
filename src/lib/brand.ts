@@ -1,4 +1,4 @@
-﻿import logo from '@/assets/koding-next.png'
+import logo from '@/assets/koding-next.png'
 
 export const brand = {
   logo,
@@ -11,5 +11,5 @@ export const brand = {
   light: 'EDF5FC',
   border: 'D8E3ED',
   title: 'LIVE MUC EVALUATION',
-  footer: 'Koding Next  Made by Coordinator Teacher',
+  letterhead: 'Koding Next Yogyakarta',
 }

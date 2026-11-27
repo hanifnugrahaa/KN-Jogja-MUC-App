@@ -320,21 +320,34 @@
 .preview-dialog { width: min(820px, calc(100vw - 28px)); max-width: min(820px, calc(100vw - 28px)); max-height: 94dvh; padding: 15px; }
 .preview-dialog > [data-slot="dialog-header"] { padding-right: 35px; }
 .paper-scroll { max-height: min(70dvh, 740px); overflow: auto; padding: 12px; background: #eaf0f6; border: 1px solid var(--border); border-radius: .4rem; }
-.paper { min-height: 690px; padding: clamp(14px,3vw,40px); background: white; color: var(--foreground); font-family: Arial, sans-serif; font-size: .81rem; overflow-wrap: anywhere; }
-.paper-letterhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 3px solid var(--primary); color: var(--muted-foreground); }
+.paper { min-height: 690px; padding: clamp(14px,3vw,40px); background: white; color: var(--foreground); font-family: "Segoe UI", sans-serif; font-size: .81rem; overflow-wrap: anywhere; }
+.paper-letterhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1.5px solid var(--primary); color: var(--muted-foreground); }
 .paper-letterhead img { width: 91px; }
 .paper h2 { font-size: clamp(1rem, 2.65vw, 1.42rem); font-weight: 750; margin: 18px 0 12px; }
 .paper-details div, .paper-outcome div { display: grid; grid-template-columns: minmax(105px, 26%) 1fr; gap: 8px; padding: 5px; }
 .paper dt { font-weight: 700; }
 .paper-rubric { width: 100%; margin: 12px 0; text-align: left; border-collapse: collapse; }
 .paper-rubric th, .paper-rubric td { padding: 6px; }
-.paper-rubric thead { background: var(--brand-navy); color: white; }
-.paper-rubric td { text-align: center; }
-.paper-rubric tbody tr:nth-child(even), .paper-outcome { background: var(--brand-light); }
+.paper-rubric thead { background: var(--brand-light); color: var(--brand-blue); }
+.paper-rubric tr { border-bottom: 1px solid var(--border); }
+.paper-rubric :is(td, th:not(:first-child)) { text-align: center; }
+.paper-outcome div:first-child { background: var(--brand-light); }
+.paper-outcome div:first-child dd { color: var(--brand-blue); font-weight: 700; }
 .paper h3 { font-size: .85rem; margin: 15px 0 6px; font-weight: 750; }
+.paper-notes-card {
+  margin-top: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: .27rem;
+  background: var(--card);
+}
+.paper-notes-card h3 { margin-top: 0; color: var(--brand-blue); }
 .paper-notes { white-space: pre-wrap; }
-.paper-signature { margin-top: 24px; padding-top: 6px; border-top: 1px solid var(--border); width: min(220px, 100%); }
-.paper footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: .72rem; }
+.paper-signature-block { width: min(220px, 100%); margin-left: auto; text-align: right; }
+.paper-signature { margin-top: 25px; padding-top: 6px; border-top: 1px solid var(--border); font-weight: 700; }
+.paper-signature-image { display: block; width: auto; max-width: 100%; max-height: 57px; margin: 7px 0 0 auto; }
+.paper-signature-image + .paper-signature { margin-top: 4px; }
+.paper-signature-role { color: var(--muted-foreground); font-size: .78rem; }
 
 @media (max-width: 1200px) and (min-width: 1051px) {
   .app-shell { grid-template-columns: 202px minmax(0, 1fr); }
