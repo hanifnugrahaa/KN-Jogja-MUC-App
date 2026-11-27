@@ -147,7 +147,7 @@ export function EvaluationForm({ form, result, notes }: Props) {
         <CardHeader className="section-heading">
           <span className="section-icon"><MessageSquareText /></span>
           <div>
-            <CardTitle><h2><label htmlFor="evaluation-notes">Evaluator Notes</label></h2></CardTitle>
+            <CardTitle><h2><label htmlFor="evaluation-notes">Supervisor Notes</label></h2></CardTitle>
           </div>
         </CardHeader>
         <CardContent>

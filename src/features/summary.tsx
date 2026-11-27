@@ -62,7 +62,7 @@ export function Summary({ result, notes, override, onOverride }: {
               <h3><a href="#evaluation-notes" onClick={(event) => {
                 event.preventDefault()
                 document.getElementById('evaluation-notes')?.focus()
-              }}>Evaluator Notes</a></h3>
+              }}>Supervisor Notes</a></h3>
               <p>{notes}</p>
             </section>
           )}

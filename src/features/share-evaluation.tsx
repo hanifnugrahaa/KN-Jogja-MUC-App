@@ -58,7 +58,7 @@ export function ShareEvaluation({ client, record, onClose }: {
         </DialogHeader>
         <form className="grid gap-3" onSubmit={(event) => { event.preventDefault(); void update(false) }}>
           <Label><input type="checkbox" checked={includeNotes} disabled={loading || busy}
-            onChange={(event) => setIncludeNotes(event.target.checked)} /> Include evaluator notes</Label>
+            onChange={(event) => setIncludeNotes(event.target.checked)} /> Include Supervisor Notes</Label>
           <DialogFooter>
             {shared && <Button type="button" variant="destructive" disabled={busy} onClick={() => void update(true)}>Unpublish</Button>}
             <Button type="submit" disabled={loading || busy}>{shared ? 'Update publication' : 'Publish evaluation'}</Button>

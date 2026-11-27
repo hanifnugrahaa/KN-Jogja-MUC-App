@@ -26,9 +26,9 @@ const rubricId = z.enum(rubric.map(({ id }) => id))
 const ratingSchema = z.partialRecord(rubricId, z.number().int().min(1).max(5))
 const overrideSchema = z.union([z.enum(recommendations), z.literal('automatic')])
 const details = {
-  candidate: 'Candidate Name',
-  topic: 'Topic / Module',
-  evaluator: 'Evaluator Name',
+  candidate: 'Teacher Name',
+  topic: 'Module / Lesson',
+  evaluator: 'Supervisor Name',
   date: 'Evaluation Date',
   branch: 'Center / Branch',
 } as const
@@ -38,9 +38,9 @@ export const draftSchema = z.object({
   ratings: ratingSchema, notes: z.string(), override: overrideSchema,
 })
 export const evaluationSchema = draftSchema.extend({
-  candidate: z.string().trim().min(1, 'Enter the candidate name.').max(120),
+  candidate: z.string().trim().min(1, 'Enter the Teacher Name.').max(120),
   topic: z.string().trim().min(1, 'Enter the topic or module.').max(120),
-  evaluator: z.string().trim().min(1, 'Enter the evaluator name.').max(120),
+  evaluator: z.string().trim().min(1, 'Enter the Supervisor Name.').max(120),
   date: z.iso.date({ error: 'Select an evaluation date.' }),
   branch: z.string().trim().min(1, 'Enter the center or branch.').max(120),
   notes: z.string().trim().max(4000, 'Use 4,000 characters or fewer.'),
