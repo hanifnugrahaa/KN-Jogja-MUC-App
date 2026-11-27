@@ -1,0 +1,17 @@
+project_id = "koding-next-muc"
+
+[auth]
+site_url = "https://koding-next-muc.lissomecoral4.chatgpt.site"
+additional_redirect_urls = ["http://localhost:5173/", "http://127.0.0.1:5173/"]
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m"
+otp_length = 8
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[storage.vector]
+enabled = false
