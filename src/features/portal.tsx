@@ -284,20 +284,17 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
             <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
           </div>
         ) : (
-          <Card className="trainer-glass">
+          <Card className="trainer-glass" data-reset={mode === 'request'}>
             <CardHeader className="trainer-card-heading">
               <img className="trainer-card-logo" src={brand.logo} width={94} height={43} alt={brand.name} />
               <CardTitle><h1>{recovery ? 'Set Trainer Password' : mode === 'request' ? 'Reset Password' : 'Coordinator Teacher Login'}</h1></CardTitle>
             </CardHeader>
             <CardContent>
-              {mode === 'request' && (
-                <p className="trainer-recovery-note"
-                  role={resetResult === 'unregistered' ? 'alert' : resetResult === 'sent' ? 'status' : undefined}>
+              {mode === 'request' && resetResult && (
+                <p className="trainer-recovery-note" role={resetResult === 'unregistered' ? 'alert' : 'status'}>
                   {resetResult === 'unregistered'
-                    ? 'Email tidak dikirim karena alamat ini tidak terdaftar di MUC. Hubungi Coordinator Teacher.'
-                    : resetResult === 'sent'
-                      ? 'Check your email for the password reset link. If it does not arrive, contact the Coordinator Teacher.'
-                      : 'Reset links are only sent to registered trainer email addresses.'}
+                    ? 'No email was sent because this address is not registered in MUC. Contact the Coordinator Teacher.'
+                    : 'Check your email for the password reset link. If it does not arrive, contact the Coordinator Teacher.'}
                 </p>
               )}
               {!(mode === 'request' && resetResult === 'sent') && (

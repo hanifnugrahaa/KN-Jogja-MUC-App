@@ -631,7 +631,8 @@
   font: 760 clamp(1.45rem, 4vw, 1.68rem)/1.2 var(--font-heading);
   letter-spacing: -.042em;
 }
-.trainer-recovery-note { margin-bottom: 14px; color: #d2e9fc; font-size: .88rem; line-height: 1.55; }
+.trainer-glass[data-reset="true"] { gap: 14px; }
+.trainer-recovery-note { margin-bottom: 8px; color: #d2e9fc; font-size: .88rem; line-height: 1.55; }
 .trainer-credentials { display: grid; gap: 9px; }
 .trainer-credentials label { color: #ecf7ff; }
 .trainer-credentials input {
