@@ -11,5 +11,5 @@ export const brand = {
   light: 'EDF5FC',
   border: 'D8E3ED',
   title: 'LIVE MUC EVALUATION',
-  footer: 'Koding Next  System Made by Coordinator Teacher',
+  footer: 'Koding Next  Made by Coordinator Teacher',
 }

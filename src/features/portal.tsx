@@ -1,5 +1,6 @@
 import { ChevronLeft, Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type { MouseEvent } from 'react'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -16,13 +17,61 @@ import { EvaluationHistory } from './history'
 import { ReportPreview } from './report-preview'
 import App from '@/App'
 
-export function Portal({ client }: { client: SupabaseClient }) {
-  return window.location.pathname.replace(/\/$/, '') === '/trainer'
-    ? <TrainerPortal client={client} />
-    : <PublicEvaluations client={client} />
+function portalRoute() {
+  return window.location.pathname.replace(/\/$/, '') === '/trainer' ? '/trainer' : '/'
 }
 
-function PublicEvaluations({ client }: { client: SupabaseClient }) {
+function PagePreloader() {
+  return (
+    <main className="muc-page-loader">
+      <div className="muc-page-loader-content" role="status">
+        <img src={brand.logo} width={106} height={48} alt="Koding Next" />
+        <LoaderCircle className="muc-page-loader-spinner" size={25} aria-hidden="true" />
+        <span className="sr-only">Loading MUC</span>
+      </div>
+    </main>
+  )
+}
+
+export function Portal({ client }: { client: SupabaseClient }) {
+  const [route, setRoute] = useState(portalRoute)
+  const [visibleRoute, setVisibleRoute] = useState(route)
+
+  useEffect(() => {
+    const onPopState = () => setRoute(portalRoute())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  useEffect(() => {
+    if (route === visibleRoute) return
+    const reveal = window.setTimeout(() => setVisibleRoute(route), 240)
+    return () => window.clearTimeout(reveal)
+  }, [route, visibleRoute])
+
+  function navigate(event: MouseEvent<HTMLDivElement>) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null
+    if (!link || link.origin !== window.location.origin || link.target || link.hasAttribute('download')) return
+    if (link.hash || link.search || (link.pathname !== '/' && link.pathname !== '/trainer') || link.pathname === route) return
+    event.preventDefault()
+    window.history.pushState(null, '', link.pathname)
+    window.scrollTo(0, 0)
+    setRoute(portalRoute())
+  }
+
+  const navigating = visibleRoute !== route
+  return (
+    <div onClick={navigate}>
+      {route === '/trainer'
+        ? <TrainerPortal client={client} navigating={navigating} />
+        : <PublicEvaluations client={client} navigating={navigating} />}
+      <Toaster position="bottom-right" richColors />
+    </div>
+  )
+}
+
+function PublicEvaluations({ client, navigating }: { client: SupabaseClient; navigating: boolean }) {
   const [records, setRecords] = useState<SavedEvaluation[]>()
   const [error, setError] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
@@ -44,6 +93,8 @@ function PublicEvaluations({ client }: { client: SupabaseClient }) {
     return () => { active = false }
   }, [client])
 
+  if (navigating || (!records && !error)) return <PagePreloader />
+
   return (
     <main className="main-content max-w-5xl">
       <header className="mb-6 flex items-center justify-between gap-4">
@@ -52,15 +103,13 @@ function PublicEvaluations({ client }: { client: SupabaseClient }) {
       </header>
       <h1 className="mb-4 text-3xl font-bold">Public Evaluations</h1>
       {error ? <p role="alert">Could not load public evaluations. Please reload the page.</p>
-        : records ? <EvaluationHistory records={records} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />
-        : <p role="status">Loading evaluations?</p>}
+        : <EvaluationHistory records={records ?? []} onPreview={(row) => setReport(reportData(row.evaluation, row.thresholds))} />}
       <ReportPreview report={report} onClose={() => setReport(null)} />
-      <Toaster position="bottom-right" richColors />
     </main>
   )
 }
 
-function TrainerPortal({ client }: { client: SupabaseClient }) {
+function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigating: boolean }) {
   const [user, setUser] = useState<User | null | undefined>(undefined)
   const [access, setAccess] = useState<{ userId: string; trainer: boolean }>()
   const [failure, setFailure] = useState(false)
@@ -101,6 +150,7 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
   }, [client, userId])
 
   async function submitCredentials() {
+    toast.dismiss('trainer-auth-error')
     setBusy(true)
     try {
       if (mode === 'request') {
@@ -123,7 +173,7 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
     } catch {
       toast.error(mode === 'request' ? 'Could not send the password reset email. Try again later.'
         : mode === 'recovery' ? 'Could not save the password. Choose a different password or request a new link.'
-        : 'Could not sign in. Check your email and password.')
+        : 'Could not sign in. Check your email and password.', { id: 'trainer-auth-error' })
     } finally {
       setBusy(false)
     }
@@ -138,6 +188,11 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
     setAccess(undefined)
     setFailure(false)
     setSent(false)
+  }
+
+  if (navigating || user === undefined || (busy && mode !== 'request')
+      || (user && !failure && access?.userId !== user.id)) {
+    return <PagePreloader />
   }
 
   const trainer = !!user && access?.userId === user.id && access.trainer
@@ -196,7 +251,7 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
                   </>}
                   <Button className="trainer-submit" disabled={busy} aria-busy={busy} type="submit">
                     {busy && <LoaderCircle className="trainer-submit-spinner" aria-hidden="true" />}
-                    {busy ? (mode === 'login' ? 'Signing in…' : 'Please wait…')
+                    {busy ? 'Please wait…'
                       : recovery ? 'Save password' : mode === 'request' ? 'Send password reset link' : 'Sign in'}
                   </Button>
                 </form>
@@ -211,7 +266,6 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
           </Card>
         )}
       </div>
-      <Toaster position="bottom-right" richColors />
     </main>
   )
 }

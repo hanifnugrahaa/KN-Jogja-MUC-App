@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { ShareEvaluation } from '@/features/share-evaluation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
-  ChevronRight, ClipboardCheck, HardDrive, FilePlus2, FileText, History, Info, LayoutGrid,
+  ChevronRight, ClipboardCheck, HardDrive, FilePlus2, FileText, Globe, History, Info, LayoutGrid, LogOut,
   Menu, RotateCcw, Save, Settings2,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -41,7 +41,7 @@ function currentPage(): Page {
   return hash === 'history' || hash === 'settings' ? hash : 'evaluation'
 }
 
-function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (opensEvaluation: boolean) => void }) {
+function Sidebar({ page, onNavigate, onSignOut }: { page: Page; onNavigate: (opensEvaluation: boolean) => void; onSignOut?: () => Promise<void> }) {
   return (
     <div className="sidebar-inner">
       <div className="sidebar-brand">
@@ -59,7 +59,20 @@ function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (opensEvaluatio
           </a>
         ))}
       </nav>
-      <div className="sidebar-footer"><strong>Koding Next Yogyakarta</strong><span>System Made by Coordinator Teacher</span></div>
+      <div className="sidebar-footer">
+        {onSignOut && (
+          <div className="trainer-nav-actions" role="group" aria-label="Trainer navigation">
+            <Button variant="ghost" className="trainer-nav-public" asChild>
+              <a href="/"><span className="trainer-nav-icon"><Globe aria-hidden="true" /></span>Public Evaluations</a>
+            </Button>
+            <Button type="button" variant="ghost" className="trainer-nav-signout" onClick={() => void onSignOut()}>
+              <span className="trainer-nav-icon"><LogOut aria-hidden="true" /></span>Sign out
+            </Button>
+          </div>
+        )}
+        <strong>Koding Next Yogyakarta</strong>
+        <span>Made by Coordinator Teacher</span>
+      </div>
     </div>
   )
 }
@@ -237,12 +250,12 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
         document.getElementById('main-content')?.focus()
       }}>Skip to content</a>
       <div className="app-shell">
-        <aside className="desktop-sidebar"><Sidebar page={page} onNavigate={(opensEvaluation) => { if (opensEvaluation) startEvaluation() }} /></aside>
+        <aside className="desktop-sidebar"><Sidebar page={page} onSignOut={portal?.signOut} onNavigate={(opensEvaluation) => { if (opensEvaluation) startEvaluation() }} /></aside>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetContent side="left" className="mobile-sidebar" onCloseAutoFocus={(event) => { event.preventDefault(); mobileMenu.current?.focus() }}>
             <SheetTitle className="sr-only">Workspace navigation</SheetTitle>
             <SheetDescription className="sr-only">Navigate the evaluation workspace.</SheetDescription>
-            <Sidebar page={page} onNavigate={(opensEvaluation) => { setMobileOpen(false); if (opensEvaluation) startEvaluation() }} />
+            <Sidebar page={page} onSignOut={portal?.signOut} onNavigate={(opensEvaluation) => { setMobileOpen(false); if (opensEvaluation) startEvaluation() }} />
           </SheetContent>
         </Sheet>
         <div className="app-workspace">
@@ -262,8 +275,6 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                   <span>Storage unavailable</span>
                 </div>
               )}
-              {portal && <div className="ml-auto flex gap-2"><Button variant="outline" className="hidden sm:inline-flex" asChild><a href="/">Public Evaluations</a></Button><Button variant="outline" onClick={() => void portal.signOut()}>Sign out</Button></div>}
-
             </div>
           </header>
           <main id="main-content" tabIndex={-1} className="main-content">
@@ -279,21 +290,27 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                   <TooltipContent>{pages[page].description}</TooltipContent>
                 </Tooltip>
               </div>
-              {page === 'evaluation' && (
-                <div className="page-actions">
-                  <Button type="button" variant="outline" onClick={() => void form.handleSubmit((evaluation) => openPreview(evaluation, thresholds), focusValidation)()}><FileText /> Preview Report</Button>
-                  <Button type="submit" form="evaluation-form"><Save /> {editing ? 'Save Changes' : 'Save Evaluation'}</Button>
-                </div>
-              )}
             </div>
             {page === 'evaluation' && (
               <form id="evaluation-form" noValidate onSubmit={(event) => void form.handleSubmit(saveEvaluation, focusValidation)(event)}>
+                <p className="required-hint"><span className="required">*</span> Required field</p>
                 <div className="evaluation-layout">
                   <div className="form-column">
                     <EvaluationForm form={form} result={result} notes={draft.notes} />
-                    <div className="form-footer">
-                      <p><span className="required">*</span> Required field</p>
-                      <Button type="button" variant="ghost" onClick={resetEvaluation}><RotateCcw /> Reset Form</Button>
+                    <div className="form-footer" role="group" aria-labelledby="evaluation-actions-title">
+                      <h2 id="evaluation-actions-title">Evaluation Actions</h2>
+                      <div className="form-actions">
+                        <Button type="button" variant="ghost" aria-label="Reset Form" onClick={resetEvaluation}>
+                          <RotateCcw /><span className="form-action-full">Reset Form</span><span className="form-action-short">Reset</span>
+                        </Button>
+                        <Button type="button" variant="outline" aria-label="Preview Report"
+                          onClick={() => void form.handleSubmit((evaluation) => openPreview(evaluation, thresholds), focusValidation)()}>
+                          <FileText /><span className="form-action-full">Preview Report</span><span className="form-action-short">Preview</span>
+                        </Button>
+                        <Button type="submit" aria-label={editing ? 'Save Changes' : 'Save Evaluation'}>
+                          <Save /><span className="form-action-full">{editing ? 'Save Changes' : 'Save Evaluation'}</span><span className="form-action-short">Save</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   <Summary result={result} notes={draft.notes} override={draft.override} onOverride={(value) => form.setValue('override', value, { shouldDirty: true })} />
@@ -329,7 +346,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Toaster position="bottom-right" richColors />
+      {!portal && <Toaster position="bottom-right" richColors />}
     </TooltipProvider>
   )
 }
