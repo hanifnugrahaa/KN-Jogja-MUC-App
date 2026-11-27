@@ -1,4 +1,4 @@
-import { ChevronLeft, LockKeyhole, Pause, Play } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from 'sonner'
@@ -48,7 +48,7 @@ function PublicEvaluations({ client }: { client: SupabaseClient }) {
     <main className="main-content max-w-5xl">
       <header className="mb-6 flex items-center justify-between gap-4">
         <img src={brand.logo} width={101} alt={brand.name} />
-        <Button variant="outline" asChild><a href="/trainer">Trainer Login</a></Button>
+        <Button variant="outline" asChild><a href="/trainer">Coordinator Teacher Login</a></Button>
       </header>
       <h1 className="mb-4 text-3xl font-bold">Public Evaluations</h1>
       {error ? <p role="alert">Could not load public evaluations. Please reload the page.</p>
@@ -66,16 +66,17 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
   const [failure, setFailure] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [mode, setMode] = useState<'login' | 'request' | 'recovery'>('login')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
-  const [motionPaused, setMotionPaused] = useState(false)
   useEffect(() => {
     const { data } = client.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setMode('recovery')
       if (event === 'SIGNED_OUT') {
         setMode('login')
         setPassword('')
+        setShowPassword(false)
       }
       setUser(session?.user ?? null)
     })
@@ -147,67 +148,69 @@ function TrainerPortal({ client }: { client: SupabaseClient }) {
 
   return (
     <main className="trainer-gate">
-      <div className="trainer-light" aria-hidden="true" data-paused={motionPaused}>
+      <div className="trainer-light" aria-hidden="true">
         <div className="trainer-beam trainer-beam-main" />
         <div className="trainer-beam trainer-beam-echo" />
       </div>
       <header className="trainer-topbar">
-        <a href="/" className="trainer-brand" aria-label="Koding Next home">
-          <img src={brand.logo} width={83} alt={brand.name} />
-        </a>
         <Button variant="outline" asChild><a href="/"><ChevronLeft /> Public Evaluations</a></Button>
       </header>
       <div className="trainer-gate-body">
-      {user === undefined || (user && !failure && access?.userId !== user.id) ? (
-        <p role="status">Loading MUC…</p>
-      ) : failure ? (
-        <div className="trainer-status space-y-3"><p role="alert">Could not check trainer access.</p><Button variant="outline" onClick={() => void signOut()}>Sign out</Button></div>
-      ) : user && !recovery ? (
-        <div className="trainer-status space-y-3">
-          <p role="alert">This account does not have trainer access.</p>
-          <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
-        </div>
-      ) : (
-        <Card className="trainer-glass">
-          <CardHeader className="trainer-card-heading">
-            <span className="trainer-lock" aria-hidden="true"><LockKeyhole size={21} /></span>
-            <CardTitle><h1>{recovery ? 'Set Trainer Password' : mode === 'request' ? 'Reset Password' : 'Trainer Login'}</h1></CardTitle>
-            {mode === 'login' && <p>Sign in to manage MUC evaluations.</p>}
-          </CardHeader>
-          <CardContent>
-            {mode === 'request' && sent ? (
-              <p role="status">If the account can receive reset emails, a password setup link will arrive shortly.</p>
-            ) : (
-              <form className="trainer-credentials" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
-                {!recovery && <>
-                  <Label htmlFor="portal-email">Email address</Label>
-                  <Input id="portal-email" type="email" autoComplete="username" maxLength={254} required value={email}
-                    onChange={(event) => setEmail(event.target.value)} />
-                </>}
-                {mode !== 'request' && <>
-                  <Label htmlFor="portal-password">{recovery ? 'New password' : 'Password'}</Label>
-                  <Input id="portal-password" type="password" autoComplete={recovery ? 'new-password' : 'current-password'}
-                    minLength={recovery ? 8 : undefined} required value={password}
-                    onChange={(event) => setPassword(event.target.value)} />
-                </>}
-                <Button className="trainer-submit" disabled={busy} type="submit">{busy ? 'Please wait?'
-                  : recovery ? 'Save password' : mode === 'request' ? 'Send password reset link' : 'Sign in'}</Button>
-              </form>
-            )}
-            {!recovery && <Button className="trainer-reset" variant="link" disabled={busy} onClick={() => {
-              setMode(mode === 'request' ? 'login' : 'request')
-              setPassword('')
-              setSent(false)
-            }}>{mode === 'request' ? 'Back to sign in' : 'Set or reset password'}</Button>}
-          </CardContent>
-        </Card>
-      )}
+        {user === undefined || (user && !failure && access?.userId !== user.id) ? (
+          <p role="status">Loading MUC…</p>
+        ) : failure ? (
+          <div className="trainer-status space-y-3"><p role="alert">Could not check trainer access.</p><Button variant="outline" onClick={() => void signOut()}>Sign out</Button></div>
+        ) : user && !recovery ? (
+          <div className="trainer-status space-y-3">
+            <p role="alert">This account does not have trainer access.</p>
+            <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
+          </div>
+        ) : (
+          <Card className="trainer-glass">
+            <CardHeader className="trainer-card-heading">
+              <img className="trainer-card-logo" src={brand.logo} width={94} height={43} alt={brand.name} />
+              <CardTitle><h1>{recovery ? 'Set Trainer Password' : mode === 'request' ? 'Reset Password' : 'Coordinator Teacher Login'}</h1></CardTitle>
+            </CardHeader>
+            <CardContent>
+              {mode === 'request' && sent ? (
+                <p role="status">If the account can receive reset emails, a password setup link will arrive shortly.</p>
+              ) : (
+                <form className="trainer-credentials" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
+                  {!recovery && <>
+                    <Label htmlFor="portal-email">Email address</Label>
+                    <Input id="portal-email" type="email" autoComplete="username" maxLength={254} required value={email}
+                      onChange={(event) => setEmail(event.target.value)} />
+                  </>}
+                  {mode !== 'request' && <>
+                    <Label htmlFor="portal-password">{recovery ? 'New password' : 'Password'}</Label>
+                    <div className="trainer-password">
+                      <Input id="portal-password" type={showPassword ? 'text' : 'password'} autoComplete={recovery ? 'new-password' : 'current-password'}
+                        minLength={recovery ? 8 : undefined} required value={password}
+                        onChange={(event) => setPassword(event.target.value)} />
+                      <Button type="button" variant="ghost" size="icon" className="trainer-password-toggle"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="portal-password"
+                        onClick={() => setShowPassword(!showPassword)}>
+                        {showPassword ? <EyeOff /> : <Eye />}
+                      </Button>
+                    </div>
+                  </>}
+                  <Button className="trainer-submit" disabled={busy} aria-busy={busy} type="submit">
+                    {busy && <LoaderCircle className="trainer-submit-spinner" aria-hidden="true" />}
+                    {busy ? (mode === 'login' ? 'Signing in…' : 'Please wait…')
+                      : recovery ? 'Save password' : mode === 'request' ? 'Send password reset link' : 'Sign in'}
+                  </Button>
+                </form>
+              )}
+              {!recovery && <Button className="trainer-reset" variant="link" disabled={busy} onClick={() => {
+                setMode(mode === 'request' ? 'login' : 'request')
+                setPassword('')
+                setShowPassword(false)
+                setSent(false)
+              }}>{mode === 'request' ? 'Back to sign in' : 'Set or reset password'}</Button>}
+            </CardContent>
+          </Card>
+        )}
       </div>
-      <Button className="trainer-motion" variant="ghost" size="icon" type="button"
-        aria-label={motionPaused ? 'Resume background animation' : 'Pause background animation'}
-        onClick={() => setMotionPaused(!motionPaused)}>
-        {motionPaused ? <Play /> : <Pause />}
-      </Button>
       <Toaster position="bottom-right" richColors />
     </main>
   )

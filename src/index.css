@@ -344,9 +344,9 @@
   overflow: clip;
   color: #f4faff;
   background:
-    radial-gradient(ellipse at 72% 65%, #123d69 0%, transparent 48%),
-    radial-gradient(ellipse at 18% 36%, #0b335a 0%, transparent 44%),
-    #06192e;
+    radial-gradient(ellipse at 72% 66%, color-mix(in srgb, var(--brand-navy) 65%, #050d1e) 0%, transparent 52%),
+    radial-gradient(ellipse at 16% 30%, #0a2542 0%, transparent 51%),
+    #050e1d;
 }
 .trainer-light {
   position: absolute;
@@ -357,59 +357,46 @@
 }
 .trainer-beam {
   position: absolute;
-  left: -22%;
-  top: 43%;
-  width: 144%;
-  height: clamp(190px, 32vw, 460px);
+  left: -31%;
+  top: 21%;
+  width: 162%;
+  height: clamp(280px, 56vh, 680px);
   border-radius: 50%;
   background:
-    radial-gradient(ellipse at 70% 100%, #b0f3ff 0%, #54c4fa 6%, transparent 35%),
-    radial-gradient(ellipse at 25% 98%, #2387f8 0%, #4376fa 12%, transparent 41%),
-    radial-gradient(ellipse at 50% 105%, #1d7aff 0%, transparent 50%);
-  border-bottom: 2px solid #9feaffb8;
-  box-shadow: 0 11px 38px -19px #68dcff;
-  transform-origin: 50% 50%;
-  animation: trainer-light-sweep 11s ease-in-out infinite;
-}
-.trainer-beam-main::after {
-  content: '';
-  position: absolute;
-  inset: 28% 0 -8%;
-  border-radius: inherit;
-  background: radial-gradient(ellipse at 67% 83%, #44c6fc9c, #116ffc45 24%, transparent 62%);
-  filter: blur(22px);
+    radial-gradient(ellipse at 73% 79%, #c1f5ff 0%, #5ad6fc 7%, #148ac75c 29%, transparent 52%),
+    radial-gradient(ellipse at 27% 76%, #6795ff 0%, #2767eebd 19%, transparent 52%),
+    radial-gradient(ellipse at 54% 79%, color-mix(in srgb, var(--brand-blue) 85%, #6eaaff), transparent 62%);
+  mask-image: radial-gradient(ellipse 56% 75% at 50% 3%, transparent 49%, #0002 57%, #000 68%, #000 72%, #0003 83%, transparent 96%);
+  mix-blend-mode: screen;
+  filter: blur(11px);
+  animation: trainer-light-sweep 13s cubic-bezier(.45,0,.55,1) infinite;
 }
 .trainer-beam-echo {
-  top: 31%;
-  height: clamp(220px, 38vw, 540px);
-  border-color: #59aaff8a;
-  filter: blur(9px);
-  opacity: .56;
+  left: -28%;
+  top: 18%;
+  width: 156%;
+  height: clamp(300px, 65vh, 760px);
+  background:
+    radial-gradient(ellipse at 69% 72%, #60e7ff 0%, #356ff86b 24%, transparent 52%),
+    radial-gradient(ellipse at 32% 72%, #2b7be88c 0%, #116ac352 24%, transparent 53%);
+  filter: blur(26px);
+  animation-duration: 18s;
   animation-direction: reverse;
-  animation-duration: 16s;
-  animation-delay: -5s;
+  animation-delay: -6s;
 }
 @keyframes trainer-light-sweep {
-  0%, 100% { transform: translate3d(-8%, -19%, 0) rotate(-11deg) scaleX(1.06); opacity: .78; }
-  33% { transform: translate3d(7%, -32%, 0) rotate(4deg) scaleX(.95); opacity: .95; }
-  67% { transform: translate3d(11%, -5%, 0) rotate(-5deg) scaleX(1.04); opacity: .57; }
+  0%, 100% { transform: translate3d(-9%, 0, 0) rotate(-9deg) scale(1.04, .93); opacity: .82; }
+  25% { transform: translate3d(0, -14%, 0) rotate(-1deg) scale(1.08, 1); opacity: .95; }
+  50% { transform: translate3d(9%, 4%, 0) rotate(8deg) scale(1, 1.08); opacity: .76; }
+  75% { transform: translate3d(1%, 13%, 0) rotate(2deg) scale(1.08, .99); opacity: .64; }
 }
-.trainer-light[data-paused="true"] .trainer-beam { animation-play-state: paused; }
 .trainer-topbar {
   width: min(100%, 1480px);
   margin-inline: auto;
   padding: 24px clamp(16px, 4vw, 55px);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
 }
-.trainer-brand {
-  background: #f4f9ff;
-  border-radius: .55rem;
-  padding: 7px 10px;
-}
-.trainer-brand img { display: block; height: auto; }
 .trainer-topbar [data-slot="button"] {
   background: #0b2440b5;
   color: #f4faff;
@@ -422,66 +409,105 @@
   display: grid;
   place-items: center;
   width: 100%;
-  padding: 22px 16px 84px;
+  padding: 22px 16px 96px;
 }
 .trainer-glass, .trainer-status {
-  --card-spacing: clamp(20px, 5vw, 32px);
-  width: min(100%, 410px);
+  --card-spacing: clamp(22px, 5vw, 34px);
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 424px);
   color: #f4faff;
-  background: linear-gradient(145deg, #1a3a58eb, #0a2038e0);
-  border: 1px solid #b0d9f950;
-  border-radius: 1.25rem;
-  backdrop-filter: blur(24px);
-  box-shadow: inset 0 1px 0 #e0f3ff21, 0 20px 74px #020b1680;
+  background:
+    radial-gradient(ellipse at 0% 0%, #d0ecff33, transparent 52%),
+    linear-gradient(145deg, #203b544a, #08192b80 76%);
+  border: 1px solid #b4ddff36;
+  border-radius: 1.45rem;
+  backdrop-filter: blur(17px) saturate(155%) brightness(115%);
+  box-shadow: inset 0 1px 0 #e5f5ff37, inset 0 -1px 1px #8cdfff27, 0 25px 84px #010a1699;
+}
+.trainer-glass::before, .trainer-glass::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.trainer-glass::before {
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(136deg, #eefaffd1, #a0d8ff55 14%, transparent 39%, transparent 58%, #5fcfff72 87%, #e3faffb3);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.trainer-glass::after {
+  inset: 1px;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 0% 13%, #d4f2ff36, transparent 30%),
+    radial-gradient(ellipse at 100% 100%, #8ae6ff36, transparent 38%);
 }
 .trainer-status { padding: 22px; }
-.trainer-card-heading { gap: 8px; }
-.trainer-card-heading h1 {
-  font: 760 clamp(1.52rem, 4vw, 1.85rem)/1.2 var(--font-heading);
-  letter-spacing: -.035em;
+.trainer-card-heading { gap: 18px; }
+.trainer-card-logo {
+  display: block;
+  height: auto;
+  filter: brightness(0) invert(1);
 }
-.trainer-card-heading p { color: #c3d9ee; font-size: .9rem; }
-.trainer-lock {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: .78rem;
-  color: #d2f4ff;
-  background: #3ba3e735;
-  border: 1px solid #b5e7ff45;
-  margin-bottom: 5px;
+.trainer-card-heading h1 {
+  font: 760 clamp(1.45rem, 4vw, 1.68rem)/1.2 var(--font-heading);
+  letter-spacing: -.042em;
 }
 .trainer-credentials { display: grid; gap: 9px; }
-.trainer-credentials label { color: #e7f5ff; }
+.trainer-credentials label { color: #ecf7ff; }
 .trainer-credentials input {
-  min-height: 45px;
+  min-height: 46px;
   margin-bottom: 7px;
-  background: #071a30c9;
+  background: #071629a3;
   border-color: #a9ccf059;
   color: #f4faff;
   padding-inline: 12px;
   color-scheme: dark;
 }
 .trainer-credentials input:is(:focus-visible, :hover) { border-color: #8bcdf7; }
-.trainer-submit {
-  min-height: 44px;
-  margin-top: 4px;
-  font-weight: 680;
-  background: #d5efff;
-  color: #082947;
-}
-.trainer-submit:hover { background: #f0faff; }
-.trainer-reset { margin-top: 11px; color: #c5e9ff; padding-inline: 0; }
-.trainer-motion {
+.trainer-password { position: relative; }
+.trainer-password input { padding-inline-end: 50px; }
+.trainer-password-toggle {
   position: absolute;
-  bottom: 18px;
-  right: clamp(16px, 4vw, 55px);
-  color: #d9efff;
-  border-color: #a9ccf040;
+  inset: 4px 4px auto auto;
+  width: 38px;
+  height: 38px;
+  color: #d0ebff;
 }
-.trainer-motion:hover { background: #163e62; color: white; }
+.trainer-password-toggle:hover { color: white; background: #a6d8ff26; }
+.trainer-submit {
+  position: relative;
+  overflow: hidden;
+  min-height: 46px;
+  margin-top: 5px;
+  font-weight: 700;
+  background: linear-gradient(110deg, #e3f5ff, #c4e8ff);
+  color: #082947;
+  box-shadow: 0 4px 20px #6ac4ff35;
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease, filter 220ms ease;
+}
+.trainer-submit:hover { filter: brightness(1.06); box-shadow: 0 5px 24px #6ac4ff58; }
+.trainer-submit:active { transform: scale(.975); }
+.trainer-submit[aria-busy="true"] { opacity: 1; }
+.trainer-submit[aria-busy="true"]::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, #ffffff8c 50%, transparent 80%);
+  animation: trainer-submit-glow 1.45s ease-in-out infinite;
+}
+.trainer-submit-spinner { animation: spin 1s linear infinite; }
+@keyframes trainer-submit-glow {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.trainer-reset { margin-top: 11px; color: #dbf3ff; padding-inline: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .trainer-beam { animation: none; transform: translateY(-20%) rotate(-7deg); }
-  .trainer-motion { display: none; }
+  .trainer-beam { animation: none; transform: translateY(-6%) rotate(-7deg); }
+  .trainer-submit, .trainer-submit:active { transform: none; transition: none; }
+  .trainer-submit[aria-busy="true"]::after, .trainer-submit-spinner { animation: none; }
 }
