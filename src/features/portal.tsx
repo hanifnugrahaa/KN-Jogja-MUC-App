@@ -14,7 +14,7 @@ import type { SavedEvaluation } from '@/lib/evaluation'
 import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
 import { loadPublishedSignature } from '@/lib/report-signature'
-import { EvaluationHistory } from './history'
+import { EvaluationHistory, PUBLIC_PAGE_SIZE } from './history'
 import { ReportPreview } from './report-preview'
 import App from '@/App'
 
@@ -82,7 +82,8 @@ export function Portal({ client }: { client: SupabaseClient }) {
 }
 
 function PublicEvaluations({ client, navigating }: { client: SupabaseClient; navigating: boolean }) {
-  const [records, setRecords] = useState<SavedEvaluation[]>()
+  const [filters, setFilters] = useState({ query: '', oldest: false, page: 1 })
+  const [result, setResult] = useState<{ filters: typeof filters; records: SavedEvaluation[]; total: number }>()
   const [error, setError] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
   const previewRequest = useRef(0)
@@ -91,18 +92,27 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
     let active = true
     async function load() {
       try {
-        const result = await client.rpc('muc_public_evaluations')
-        if (result.error) throw result.error
-        const evaluations = result.data.map((row: { id: string; shared_at: string; evaluation: unknown; thresholds: unknown }) =>
+        const response = await client.rpc('muc_public_evaluations_page', {
+          page_number: filters.page, search_text: filters.query, oldest_first: filters.oldest,
+        })
+        if (response.error) throw response.error
+        const records = response.data.rows.map((row: { id: string; shared_at: string; evaluation: unknown; thresholds: unknown }) =>
           recordSchema.parse({ id: row.id, savedAt: new Date(row.shared_at).toISOString(), evaluation: row.evaluation, thresholds: row.thresholds }))
-        if (active) setRecords(evaluations)
+        const total: number = response.data.total
+        const lastPage = Math.max(1, Math.ceil(total / PUBLIC_PAGE_SIZE))
+        if (!active) return
+        if (filters.page > lastPage) {
+          setFilters({ ...filters, page: lastPage })
+          return
+        }
+        setResult({ filters, records, total })
       } catch {
         if (active) setError(true)
       }
     }
-    void load()
-    return () => { active = false }
-  }, [client])
+    const timer = window.setTimeout(() => void load(), filters.query ? 180 : 0)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [client, filters])
 
   async function openPreview(row: SavedEvaluation) {
     const request = ++previewRequest.current
@@ -117,7 +127,7 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
     if (request === previewRequest.current) setReport(next)
   }
 
-  if (navigating || (!records && !error)) return <PagePreloader />
+  if (navigating || (!result && !error)) return <PagePreloader />
 
   return (
     <main className="portal-surface public-results">
@@ -131,7 +141,12 @@ function PublicEvaluations({ client, navigating }: { client: SupabaseClient; nav
         </header>
         <h1>MUC Result</h1>
         {error ? <p className="public-results-error" role="alert">Could not load public evaluations. Please reload the page.</p>
-          : <EvaluationHistory records={records ?? []} onPreview={openPreview} />}
+          : <EvaluationHistory records={result?.records ?? []} onPreview={openPreview} publicControls={{
+            ...filters, page: result?.filters.page ?? 1, total: result?.total ?? 0, pending: result?.filters !== filters,
+            onQuery: (query) => setFilters((previous) => ({ ...previous, query, page: 1 })),
+            onSort: (oldest) => setFilters((previous) => ({ ...previous, oldest, page: 1 })),
+            onPage: (page) => setFilters((previous) => ({ ...previous, page })),
+          }} />}
       </div>
       <ReportPreview report={report} onClose={() => { previewRequest.current++; setReport(null) }} />
     </main>
