@@ -174,7 +174,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
   const [showPassword, setShowPassword] = useState(false)
   const [mode, setMode] = useState<'login' | 'request' | 'recovery'>('login')
   const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [resetResult, setResetResult] = useState<'sent' | 'unregistered' | null>(null)
   useEffect(() => {
     const { data } = client.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setMode('recovery')
@@ -210,11 +210,19 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
     setBusy(true)
     try {
       if (mode === 'request') {
-        const { error } = await client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        setResetResult(null)
+        const address = email.trim().toLowerCase()
+        const eligible = await client.rpc('muc_reset_email_registered', { email_address: address })
+        if (eligible.error) throw eligible.error
+        if (eligible.data !== true) {
+          setResetResult('unregistered')
+          return
+        }
+        const { error } = await client.auth.resetPasswordForEmail(address, {
           redirectTo: window.location.origin + '/trainer',
         })
         if (error) throw error
-        setSent(true)
+        setResetResult('sent')
       } else if (mode === 'recovery') {
         const { error } = await client.auth.updateUser({ password })
         if (error) throw error
@@ -243,7 +251,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
     }
     setAccess(undefined)
     setFailure(false)
-    setSent(false)
+    setResetResult(null)
   }
 
   if (navigating || user === undefined || (busy && mode !== 'request')
@@ -283,17 +291,21 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
             </CardHeader>
             <CardContent>
               {mode === 'request' && (
-                <p className="trainer-recovery-note" role={sent ? 'status' : undefined}>
-                  {sent && <strong>Request received. </strong>}
-                  Reset links are only sent to registered email addresses. If your email is not registered or you do not receive a link, contact the Coordinator Teacher.
+                <p className="trainer-recovery-note"
+                  role={resetResult === 'unregistered' ? 'alert' : resetResult === 'sent' ? 'status' : undefined}>
+                  {resetResult === 'unregistered'
+                    ? 'Email tidak dikirim karena alamat ini tidak terdaftar di MUC. Hubungi Coordinator Teacher.'
+                    : resetResult === 'sent'
+                      ? 'Check your email for the password reset link. If it does not arrive, contact the Coordinator Teacher.'
+                      : 'Reset links are only sent to registered trainer email addresses.'}
                 </p>
               )}
-              {!(mode === 'request' && sent) && (
+              {!(mode === 'request' && resetResult === 'sent') && (
                 <form className="trainer-credentials" onSubmit={(event) => { event.preventDefault(); void submitCredentials() }}>
                   {!recovery && <>
                     <Label htmlFor="portal-email">Email address</Label>
-                    <Input id="portal-email" type="email" autoComplete="username" maxLength={254} required value={email}
-                      onChange={(event) => setEmail(event.target.value)} />
+                    <Input id="portal-email" type="email" autoComplete="username" maxLength={254} disabled={busy} required value={email}
+                      onChange={(event) => { setEmail(event.target.value); setResetResult(null) }} />
                   </>}
                   {mode !== 'request' && <>
                     <Label htmlFor="portal-password">{recovery ? 'New password' : 'Password'}</Label>
@@ -319,7 +331,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
                 setMode(mode === 'request' ? 'login' : 'request')
                 setPassword('')
                 setShowPassword(false)
-                setSent(false)
+                setResetResult(null)
               }}>{mode === 'request' ? 'Back to sign in' : 'Set or reset password'}</Button>}
             </CardContent>
           </Card>
