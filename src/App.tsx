@@ -27,6 +27,7 @@ import { assess, blankEvaluation, evaluationSchema } from '@/lib/evaluation'
 import type { Evaluation, SavedEvaluation, Thresholds } from '@/lib/evaluation'
 import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
+import { loadLocalSignature } from '@/lib/report-signature'
 import { loadWorkspace, saveWorkspace } from '@/lib/storage'
 
 const pages = {
@@ -92,6 +93,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const lastSaved = useRef(JSON.stringify(workspace))
   const focusAfterClose = useRef<HTMLElement | null>(null)
+  const previewRequest = useRef(0)
   const mobileMenu = useRef<HTMLButtonElement>(null)
   const form = useForm<Evaluation>({ defaultValues: workspace.draft, resolver: zodResolver(evaluationSchema) })
   const draft = useWatch({ control: form.control, compute: (values: Evaluation) => values })
@@ -144,9 +146,19 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
     toast.success(editing ? 'Evaluation updated' : 'Evaluation saved')
   }
 
-  function openPreview(evaluation: Evaluation, activeThresholds: Thresholds) {
+  async function openPreview(evaluation: Evaluation, activeThresholds: Thresholds) {
+    const request = ++previewRequest.current
     focusAfterClose.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    setReport(reportData(evaluation, activeThresholds))
+    const next: Report = reportData(evaluation, activeThresholds)
+    if (import.meta.env.DEV && portal && next.evaluatorRole) {
+      try {
+        const { data } = await portal.client.auth.getSession()
+        if (data.session) next.signature = await loadLocalSignature(data.session.access_token)
+      } catch {
+        toast.error('Could not load the local signature. The preview is unsigned.')
+      }
+    }
+    if (request === previewRequest.current) setReport(next)
   }
 
   function confirm(next: Confirmation) {
@@ -326,6 +338,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
       </div>
       {portal && sharing && <ShareEvaluation client={portal.client} record={sharing} onClose={() => setSharing(null)} />}
       <ReportPreview report={report} onClose={() => {
+        previewRequest.current++
         setReport(null)
         requestAnimationFrame(() => focusAfterClose.current?.focus())
       }} />
