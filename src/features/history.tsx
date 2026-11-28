@@ -41,7 +41,7 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
   const query = publicControls?.query ?? localQuery
   const term = query.trim().toLowerCase()
   const matches = publicControls ? records : records.filter(({ evaluation }) =>
-    [evaluation.candidate, evaluation.topic, evaluation.evaluator, evaluation.branch].some((value) => value.toLowerCase().includes(term)),
+    [evaluation.candidate, evaluation.topic, evaluation.lesson ?? '', evaluation.evaluator, evaluation.branch].some((value) => value.toLowerCase().includes(term)),
   )
   const noMatches = publicControls ? !!term || Object.values(publicControls.filters).some(Boolean) : records.length > 0
   const pages = publicControls ? Math.ceil(publicControls.total / PUBLIC_PAGE_SIZE) : 0
@@ -69,7 +69,7 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
                   <ResultSortHeading column="date" label="Evaluation Date" shortLabel="Date" sort={publicControls.sort} onSort={publicControls.onSort} />
                   <ResultSortHeading column="score" label="Score" sort={publicControls.sort} onSort={publicControls.onSort} />
                 </> : <>
-                  <TableHead>Candidate / Topic</TableHead>
+                  <TableHead>Teacher / Module</TableHead>
                   {publication && <TableHead>Publication</TableHead>}
                   <TableHead>Evaluation Date</TableHead><TableHead>Score</TableHead>
                 </>}
@@ -84,7 +84,10 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
                 const updatedAt = publication?.publishedAt.get(record.id)
                 return (
                   <TableRow key={record.id}>
-                    <TableCell><strong>{evaluation.candidate}</strong><div className="table-subtitle">{evaluation.topic}</div></TableCell>
+                    <TableCell>
+                      <strong>{evaluation.candidate}</strong>
+                      <div className="table-subtitle">{evaluation.lesson ? `${evaluation.topic} · ${evaluation.lesson}` : evaluation.topic}</div>
+                    </TableCell>
                     {publication && <TableCell>
                       {updatedAt ? (
                         <Tooltip>

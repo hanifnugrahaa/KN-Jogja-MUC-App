@@ -258,7 +258,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
       window.location.hash = 'evaluation'
       if (duplicate) toast.success('Evaluation copied to a new draft')
     }
-    const hasWork = draft.candidate || draft.topic || draft.evaluator || draft.notes || result.assessed
+    const hasWork = draft.candidate || draft.topic || draft.lesson || draft.evaluator || draft.notes || result.assessed
       || draft.branch !== 'Yogyakarta' || draft.date !== blankEvaluation().date
     const hasUnsavedDraft = editing ? editingHasChanges : !!hasWork
     if (hasUnsavedDraft) {

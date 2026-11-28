@@ -27,19 +27,21 @@ const ratingSchema = z.partialRecord(rubricId, z.number().int().min(1).max(5))
 const overrideSchema = z.union([z.enum(recommendations), z.literal('automatic')])
 const details = {
   candidate: 'Teacher Name',
-  topic: 'Module / Lesson',
+  topic: 'Module',
+  lesson: 'Lesson',
   evaluator: 'Supervisor Name',
   date: 'Evaluation Date',
   branch: 'Center / Branch',
 } as const
 export const detailFields = Object.entries(details) as [keyof typeof details, string][]
 export const draftSchema = z.object({
-  candidate: z.string(), topic: z.string(), evaluator: z.string(), date: z.string(), branch: z.string(),
+  candidate: z.string(), topic: z.string(), lesson: z.string().optional(), evaluator: z.string(), date: z.string(), branch: z.string(),
   ratings: ratingSchema, notes: z.string(), override: overrideSchema,
 })
 export const evaluationSchema = draftSchema.extend({
   candidate: z.string().trim().min(1, 'Enter the Teacher Name.').max(120),
-  topic: z.string().trim().min(1, 'Enter the topic or module.').max(120),
+  topic: z.string().trim().min(1, 'Select a module.').max(120),
+  lesson: z.string().trim().max(120, 'Use 120 characters or fewer.').optional(),
   evaluator: z.string().trim().min(1, 'Enter the Supervisor Name.').max(120),
   date: z.iso.date({ error: 'Select an evaluation date.' }),
   branch: z.string().trim().min(1, 'Enter the center or branch.').max(120),
@@ -68,7 +70,7 @@ export function formatDate(date: string) {
 }
 
 export function blankEvaluation(): Evaluation {
-  return { candidate: '', topic: '', evaluator: '', date: localDate(), branch: 'Yogyakarta', ratings: {}, notes: '', override: 'automatic' }
+  return { candidate: '', topic: '', lesson: '', evaluator: '', date: localDate(), branch: 'Yogyakarta', ratings: {}, notes: '', override: 'automatic' }
 }
 
 export const totalWeight = rubric.reduce((total, row) => total + row.weight, 0)

@@ -9,7 +9,8 @@ export function reportData(evaluation: Evaluation, thresholds: Thresholds) {
   const result = assess(evaluation, thresholds)
   const isHanif = /^(?:mr\.?\s+)?hanif(?:\s+ardiyanta)?$/i.test(evaluation.evaluator.trim())
   return {
-    details: detailFields.map(([key, label]) => [label, key === 'date' ? formatDate(evaluation.date) : evaluation[key]]),
+    details: detailFields.filter(([key]) => key !== 'lesson' || evaluation.lesson)
+      .map(([key, label]) => [label, key === 'date' ? formatDate(evaluation.date) : (evaluation[key] ?? '')]),
     rows: result.breakdown.map(({ label, weight, rating, weighted }) => [label, String(weight), rating + '/5', weighted + '/' + weight]),
     score: result.score + '/' + totalWeight,
     recommendation: result.recommendation ?? 'Pending assessment',

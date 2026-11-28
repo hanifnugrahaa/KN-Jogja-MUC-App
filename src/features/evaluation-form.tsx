@@ -15,12 +15,12 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { assess, detailFields, formatDate, localDate, ratingLabels } from '@/lib/evaluation'
 import type { Evaluation } from '@/lib/evaluation'
-import { TeacherField } from './teacher-field'
+import { DirectoryField } from './directory-field'
 
 type Props = { form: UseFormReturn<Evaluation>; result: ReturnType<typeof assess>; notes: string }
 
 const calendarEnd = new Date(new Date().getFullYear() + 10, 11)
-const placeholders = { topic: 'e.g. Python First', evaluator: 'e.g. Mr Hanif', branch: 'e.g. Yogyakarta' }
+const placeholders = { lesson: 'e.g. Variables and Data Types', evaluator: 'e.g. Mr Hanif', branch: 'e.g. Yogyakarta' }
 
 function DateField({ value, onChange, onBlur, invalid }: {
   value: string; onChange: (date: string) => void; onBlur: () => void; invalid: boolean
@@ -86,17 +86,18 @@ export function EvaluationForm({ form, result, notes }: Props) {
         <CardContent className="details-grid">
           {detailFields.map(([name, label]) => (
             <div className="field" key={name}>
-              <Label htmlFor={'field-' + name}>{label} <span className="required" aria-hidden="true">*</span></Label>
-              {name === 'candidate' ? (
-                <Controller name="candidate" control={control} render={({ field }) => (
-                  <TeacherField value={field.value} onChange={field.onChange} onBlur={field.onBlur} inputRef={field.ref} invalid={!!errors.candidate} />
+              <Label htmlFor={'field-' + name}>{label} {name !== 'lesson' && <span className="required" aria-hidden="true">*</span>}</Label>
+              {name === 'candidate' || name === 'topic' ? (
+                <Controller name={name} control={control} render={({ field }) => (
+                  <DirectoryField id={name} directory={name === 'candidate' ? 'teacher' : 'module'} value={field.value}
+                    onChange={field.onChange} onBlur={field.onBlur} inputRef={field.ref} invalid={!!errors[name]} />
                 )} />
               ) : name === 'date' ? (
                 <Controller name="date" control={control} render={({ field }) => (
                   <DateField value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.date} />
                 )} />
               ) : (
-                <Input id={'field-' + name} placeholder={placeholders[name]} maxLength={120} aria-required="true"
+                <Input id={'field-' + name} placeholder={placeholders[name]} maxLength={120} aria-required={name !== 'lesson' || undefined}
                   aria-invalid={!!errors[name]} aria-describedby={errors[name] ? 'error-' + name : undefined} {...register(name)} />
               )}
               {errors[name] && <p className="field-error" id={'error-' + name}>{errors[name]?.message}</p>}
