@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { assess, formatDate } from '@/lib/evaluation'
 import type { SavedEvaluation } from '@/lib/evaluation'
 import { RecommendationBadge } from './summary'
@@ -84,13 +85,20 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
                 return (
                   <TableRow key={record.id}>
                     <TableCell><strong>{evaluation.candidate}</strong><div className="table-subtitle">{evaluation.topic}</div></TableCell>
-                    {publication && <TableCell className="whitespace-normal">
-                      {updatedAt ? <>
-                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-800">Published</Badge>
-                        <div className="table-subtitle">
-                          Updated <time dateTime={updatedAt} className="whitespace-nowrap">{publicationTime.format(new Date(updatedAt))} WIB</time>
-                        </div>
-                      </> : <Badge variant="outline">{updatedAt === null || publication.complete ? 'Private' : 'Status unavailable'}</Badge>}
+                    {publication && <TableCell>
+                      {updatedAt ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge asChild variant="secondary" className="cursor-help bg-emerald-50 text-emerald-800">
+                              <button type="button">Published</button>
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={6} className="flex-col items-start gap-0.5">
+                            <span>Last publication update</span>
+                            <time dateTime={updatedAt}>{publicationTime.format(new Date(updatedAt))} WIB</time>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : <Badge variant="outline">{updatedAt === null || publication.complete ? 'Private' : 'Status unavailable'}</Badge>}
                     </TableCell>}
                     <TableCell>{formatDate(evaluation.date)}<div className="table-subtitle">{evaluation.branch}</div></TableCell>
                     <TableCell><span className="history-score"><strong>{result.score}</strong><small>/100</small></span></TableCell>
