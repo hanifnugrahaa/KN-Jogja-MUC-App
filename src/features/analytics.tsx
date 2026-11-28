@@ -1,16 +1,12 @@
-import { Download } from 'lucide-react'
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { assess, formatDate, recommendations, rubric, totalWeight } from '@/lib/evaluation'
 import type { SavedEvaluation } from '@/lib/evaluation'
-import { reportFilename } from '@/lib/report'
-import { loadReportFonts, ReportFontError } from '@/lib/report-font'
 import { loadDirectory } from '@/lib/storage'
+import { AnalyticsReportPreview } from './analytics-report-preview'
 
 const monthsFormat = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 const axisDateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
@@ -86,7 +82,6 @@ function BarChart({ title, values, max }: { title: string; values: Bar[]; max: n
 export default function Analytics({ records, incomplete }: { records: SavedEvaluation[]; incomplete: boolean }) {
   const [teacher, setTeacher] = useState<string | undefined>()
   const [month, setMonth] = useState('all')
-  const [exporting, setExporting] = useState(false)
   const [directory] = useState(() => loadDirectory('teacher'))
   const teachers = new Map(records.map(({ evaluation }) => [teacherKey(evaluation.candidate), evaluation.candidate]))
   for (const { name } of directory) teachers.set(teacherKey(name), name)
@@ -111,21 +106,8 @@ export default function Analytics({ records, incomplete }: { records: SavedEvalu
     return { id: label, label, value, detail: String(value) }
   })
 
-  async function exportPdf() {
-    setExporting(true)
-    const teacherName = (selectedTeacher && teachers.get(selectedTeacher)) || 'All teachers'
-    const period = selectedMonth === 'all' ? 'All months' : monthLabel(selectedMonth)
-    try {
-      const [fonts, { createAnalyticsPdf }] = await Promise.all([loadReportFonts(), import('@/lib/export-analytics-pdf')])
-      const pdf = await createAnalyticsPdf({ teacher: teacherName, period, average, incomplete, scores, criteria, recommendations: distribution }, fonts)
-      pdf.save(reportFilename(`Analytics-${teacherName}-${period}`, 'pdf'))
-      toast.success('Analytics PDF downloaded')
-    } catch (error) {
-      toast.error(error instanceof ReportFontError ? error.message : 'Could not export analytics. Please try again.')
-    } finally {
-      setExporting(false)
-    }
-  }
+  const teacherName = (selectedTeacher && teachers.get(selectedTeacher)) || 'All teachers'
+  const period = selectedMonth === 'all' ? 'All months' : monthLabel(selectedMonth)
 
   return (
     <div className="grid gap-4">
@@ -155,9 +137,7 @@ export default function Analytics({ records, incomplete }: { records: SavedEvalu
               </SelectContent>
             </Select>
           </div>
-          <Button type="button" variant="outline" disabled={!count || exporting} onClick={() => void exportPdf()}>
-            <Download aria-hidden="true" />{exporting ? 'Exporting…' : 'Export PDF'}
-          </Button>
+          <AnalyticsReportPreview report={{ teacher: teacherName, period, average, incomplete, scores, criteria, recommendations: distribution }} />
         </CardContent>
       </Card>
       {count === 0 ? <div className="empty-state"><h2>No evaluations to chart yet</h2></div> : <>
