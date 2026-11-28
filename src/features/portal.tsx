@@ -262,7 +262,7 @@ function TrainerPortal({ client, navigating }: { client: SupabaseClient; navigat
   const trainer = !!user && access?.userId === user.id && access.trainer
   const recovery = trainer && mode === 'recovery'
   if (trainer && !recovery) {
-    return <App portal={{ client, signOut }} />
+    return <App key={user.id} portal={{ client, userId: user.id, signOut }} />
   }
 
   return (

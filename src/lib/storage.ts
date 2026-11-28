@@ -3,6 +3,7 @@ import type { Workspace } from './evaluation'
 import { z } from 'zod'
 
 const key = 'koding-next-muc-v1'
+const legacyOwnerKey = key + ':legacy-owner'
 export const moduleAgeLabels = { '8-12': '8–12', '12-16': '12–16', both: '8–12 & 12–16' } as const
 const entryName = z.string().trim().min(1).max(120)
 const directoryEntry = z.object({ name: entryName, age: z.enum(['8-12', '12-16', 'both']).optional() })
@@ -47,9 +48,11 @@ export function saveDirectory(directory: Directory, entries: DirectoryEntry[]) {
   localStorage.setItem(directories[directory].key, JSON.stringify(storedEntries.parse(values)))
 }
 
-export function loadWorkspace(): { workspace: Workspace; error: boolean } {
+export function loadWorkspace(owner?: string): { workspace: Workspace; error: boolean } {
   try {
-    const saved = localStorage.getItem(key)
+    const legacyOwner = localStorage.getItem(legacyOwnerKey)
+    let saved = localStorage.getItem(owner ? `${key}:${owner}` : key)
+    if (!saved && owner && (!legacyOwner || legacyOwner === owner)) saved = localStorage.getItem(key)
     if (saved) return { workspace: workspaceSchema.parse(JSON.parse(saved)), error: false }
   } catch {
     return { workspace: newWorkspace(), error: true }
@@ -61,6 +64,9 @@ function newWorkspace(): Workspace {
   return { draft: blankEvaluation(), editingId: null, records: [], thresholds: defaultThresholds }
 }
 
-export function saveWorkspace(workspace: Workspace) {
-  localStorage.setItem(key, JSON.stringify(workspace))
+export function saveWorkspace(workspace: Workspace, owner?: string) {
+  if (owner && !localStorage.getItem(legacyOwnerKey) && localStorage.getItem(key)) {
+    localStorage.setItem(legacyOwnerKey, owner)
+  }
+  localStorage.setItem(owner ? `${key}:${owner}` : key, JSON.stringify(workspace))
 }

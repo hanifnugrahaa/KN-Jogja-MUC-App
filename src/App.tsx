@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { ShareEvaluation } from '@/features/share-evaluation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
-  ChevronRight, ClipboardCheck, HardDrive, FilePlus2, FileText, Globe, History, Info, LayoutGrid, LogOut,
+  ChartNoAxesColumnIncreasing, ChevronRight, ClipboardCheck, HardDrive, FilePlus2, FileText, Globe, History, Info, LayoutGrid, LogOut,
   Menu, RotateCcw, Save, Settings2,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Toaster } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Analytics } from '@/features/analytics'
 import { EvaluationForm } from '@/features/evaluation-form'
 import { EvaluationHistory } from '@/features/history'
 import { ReportPreview } from '@/features/report-preview'
@@ -28,19 +29,20 @@ import type { Evaluation, SavedEvaluation, Thresholds } from '@/lib/evaluation'
 import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
 import { loadLocalSignature, loadPublishedSignature } from '@/lib/report-signature'
-import { loadSharedHistory } from '@/lib/shared-history'
+import { loadEvaluationHistory, savePrivateEvaluations } from '@/lib/shared-history'
 import { loadWorkspace, saveWorkspace } from '@/lib/storage'
 
 const pages = {
   evaluation: { label: 'New Evaluation', icon: FilePlus2, description: 'Assess a coding teacher candidate’s live MUC session.' },
   history: { label: 'Evaluation History', icon: History, description: 'Find, manage, and export saved MUC evaluations.' },
+  analytics: { label: 'Analytics', icon: ChartNoAxesColumnIncreasing, description: 'Review scores and recommendations by teacher and month.' },
   settings: { label: 'Settings', icon: Settings2, description: 'Configure how final scores translate into recommendations.' },
 }
 type Page = keyof typeof pages
 
 function currentPage(): Page {
   const hash = window.location.hash.slice(1)
-  return hash === 'history' || hash === 'settings' ? hash : 'evaluation'
+  return hash === 'history' || hash === 'analytics' || hash === 'settings' ? hash : 'evaluation'
 }
 
 function Sidebar({ page, onNavigate, onSignOut }: { page: Page; onNavigate: (opensEvaluation: boolean) => void; onSignOut?: () => Promise<void> }) {
@@ -81,11 +83,15 @@ function Sidebar({ page, onNavigate, onSignOut }: { page: Page; onNavigate: (ope
 
 type Confirmation = { title: string; description: string; action: string; run: () => void }
 
-export default function App({ portal }: { portal?: { client: SupabaseClient; signOut: () => Promise<void> } } = {}) {
+export default function App({ portal }: { portal?: { client: SupabaseClient; userId: string; signOut: () => Promise<void> } } = {}) {
+  const owner = portal?.userId
   const [sharing, setSharing] = useState<SavedEvaluation | null>(null)
-  const [{ workspace, error }] = useState(loadWorkspace)
+  const [{ workspace, error }] = useState(() => loadWorkspace(owner))
   const [records, setRecords] = useState(workspace.records)
-  const [sharedHistory, setSharedHistory] = useState<Awaited<ReturnType<typeof loadSharedHistory>>>()
+  const [sharedHistory, setSharedHistory] = useState<Awaited<ReturnType<typeof loadEvaluationHistory>>>()
+  const [privateHistory, setPrivateHistory] = useState<Awaited<ReturnType<typeof loadEvaluationHistory>> & { revision: number }>()
+  const [syncRevision, setSyncRevision] = useState(0)
+  const [importFailed, setImportFailed] = useState(false)
   const [publicationRevision, setPublicationRevision] = useState(0)
   const [editingId, setEditingId] = useState(workspace.editingId)
   const [thresholds, setThresholds] = useState(workspace.thresholds)
@@ -94,26 +100,52 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   const [storageError, setStorageError] = useState(error)
   const [report, setReport] = useState<Report | null>(null)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
-  const lastSaved = useRef(JSON.stringify(workspace))
+  const lastSaved = useRef(owner ? undefined : JSON.stringify(workspace))
+  const nextEvaluationId = useRef<string | undefined>(undefined)
   const focusAfterClose = useRef<HTMLElement | null>(null)
   const previewRequest = useRef(0)
   const deletedRecords = useRef(new Set<string>())
+  const pendingImports = useRef(workspace.records)
   const mobileMenu = useRef<HTMLButtonElement>(null)
   const form = useForm<Evaluation>({ defaultValues: workspace.draft, resolver: zodResolver(evaluationSchema) })
   const draft = useWatch({ control: form.control, compute: (values: Evaluation) => values })
   const result = assess(draft, thresholds)
-  const localIds = new Set(records.map(({ id }) => id))
-  const history = [...records, ...(sharedHistory?.records ?? []).filter(({ id }) => !localIds.has(id))]
-    .sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+  const merged = new Map<string, SavedEvaluation>()
+  for (const record of [...(sharedHistory?.records ?? []), ...records, ...(privateHistory?.records ?? [])]) merged.set(record.id, record)
+  const history = [...merged.values()].sort((a, b) => b.savedAt.localeCompare(a.savedAt))
   const publishedAt = new Map(sharedHistory?.records.map(({ id, isPublic, savedAt }) => [id, isPublic ? savedAt : null]))
   const editing = history.find(({ id }) => id === editingId)
   const editingHasChanges = editing && JSON.stringify(draft) !== JSON.stringify(editing.evaluation)
   const client = portal?.client
+  const privatePending = !!client && privateHistory?.revision !== syncRevision
+  const historyPending = privatePending || (!!client && !sharedHistory)
+  const isSubmitting = form.formState.isSubmitting
+
+  useEffect(() => {
+    if (!client || !owner) return
+    const controller = new AbortController()
+    async function sync(client: SupabaseClient, owner: string) {
+      const legacy = pendingImports.current
+      const imported = legacy.length === 0 || await savePrivateEvaluations(client, owner, legacy, 'import')
+      if (controller.signal.aborted) return
+      const remote = await loadEvaluationHistory(client, controller.signal, owner)
+      if (controller.signal.aborted) return
+      setPrivateHistory({ ...remote, revision: syncRevision, records: remote.records.filter(({ id }) => !deletedRecords.current.has(id)) })
+      setImportFailed(!imported)
+      if (imported && legacy.length && !remote.incomplete) {
+        const ids = new Set(legacy.map(({ id }) => id))
+        pendingImports.current = []
+        setRecords((previous) => previous.filter(({ id }) => !ids.has(id)))
+      }
+    }
+    void sync(client, owner)
+    return () => controller.abort()
+  }, [client, owner, syncRevision])
 
   useEffect(() => {
     if (!client) return
     const controller = new AbortController()
-    void loadSharedHistory(client, controller.signal).then((shared) => {
+    void loadEvaluationHistory(client, controller.signal).then((shared) => {
       if (!controller.signal.aborted) {
         setSharedHistory({ ...shared, records: shared.records.filter(({ id }) => !deletedRecords.current.has(id)) })
       }
@@ -135,17 +167,17 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
     const serialized = JSON.stringify(next)
     if (serialized === lastSaved.current) return
     try {
-      saveWorkspace(next)
+      saveWorkspace(next, owner)
       lastSaved.current = serialized
       setStorageError(false)
     } catch {
       setStorageError(true)
     }
-  }, [draft, records, editingId, thresholds])
+  }, [draft, records, editingId, thresholds, owner])
 
   function commit(next: typeof workspace) {
     try {
-      saveWorkspace(next)
+      saveWorkspace(next, owner)
       lastSaved.current = JSON.stringify(next)
       setStorageError(false)
       return true
@@ -156,14 +188,28 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
     }
   }
 
-  function saveEvaluation(evaluation: Evaluation) {
-    const record = { id: editing?.id ?? crypto.randomUUID(), savedAt: new Date().toISOString(), evaluation, thresholds }
-    const nextRecords = [record, ...records.filter(({ id }) => id !== record.id)]
-    if (!commit({ draft: evaluation, records: nextRecords, editingId: record.id, thresholds })) return
-    setRecords(nextRecords)
+  async function saveEvaluation(evaluation: Evaluation) {
+    if (privatePending) return
+    const record = { id: editingId ?? (nextEvaluationId.current ??= crypto.randomUUID()), savedAt: new Date().toISOString(), evaluation, thresholds }
+    if (portal) {
+      const submittedDraft = JSON.stringify(form.getValues())
+      if (!await savePrivateEvaluations(portal.client, portal.userId, [record])) {
+        toast.error('Could not save to Supabase. Your draft is still in the form. Please try again.')
+        return
+      }
+      setPrivateHistory((previous) => previous && {
+        ...previous, records: [{ ...record, isPublic: false }, ...previous.records.filter(({ id }) => id !== record.id)],
+      })
+      if (submittedDraft === JSON.stringify(form.getValues())) form.reset(evaluation)
+    } else {
+      const nextRecords = [record, ...records.filter(({ id }) => id !== record.id)]
+      if (!commit({ draft: evaluation, records: nextRecords, editingId: record.id, thresholds })) return
+      setRecords(nextRecords)
+      form.reset(evaluation)
+    }
+    nextEvaluationId.current = undefined
     setEditingId(record.id)
-    form.reset(evaluation)
-    toast.success(editing ? 'Evaluation updated' : 'Evaluation saved')
+    toast.success(editingId ? 'Evaluation updated' : 'Evaluation saved')
   }
 
   async function openPreview(evaluation: Evaluation, activeThresholds: Thresholds) {
@@ -193,6 +239,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
     const nextDraft = blankEvaluation()
     if (!commit({ draft: nextDraft, records, editingId: null, thresholds })) return false
     form.reset(nextDraft)
+    nextEvaluationId.current = undefined
     setEditingId(null)
     return true
   }
@@ -225,34 +272,41 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
       description: 'The saved evaluation for ' + record.evaluation.candidate + ' will be removed from your history.' + (portal ? ' Any shared or published copy will also be removed.' : ''),
       action: 'Delete evaluation',
       run: async () => {
-        if (portal) {
-          const { error } = await portal.client.from('muc_shared_evaluations').delete().eq('id', record.id)
-          if (error) { toast.error('Could not remove the published or shared copy. The evaluation was kept.'); return }
-          deletedRecords.current.add(record.id)
-          setSharedHistory((previous) => previous && { ...previous, records: previous.records.filter(({ id }) => id !== record.id) })
-        }
         const nextRecords = records.filter(({ id }) => record.id !== id)
-        const nextEditingId = editingId === record.id ? null : editingId
-        const nextDraft = editingId === record.id && !editingHasChanges ? blankEvaluation() : form.getValues()
-        if (!commit({ draft: nextDraft, records: nextRecords, editingId: nextEditingId, thresholds })) return
-        setRecords(nextRecords)
-        setEditingId(nextEditingId)
-        form.reset(nextDraft)
+        const deletingOpenRecord = editingId === record.id
+        const nextEditingId = deletingOpenRecord ? null : editingId
+        if (portal) {
+          const { error } = await portal.client.rpc('muc_delete_trainer_evaluation', { evaluation_id: record.id, expected_owner: portal.userId })
+          if (error) { toast.error('Could not delete the evaluation. Please try again.'); return }
+          deletedRecords.current.add(record.id)
+          pendingImports.current = pendingImports.current.filter(({ id }) => id !== record.id)
+          setSharedHistory((previous) => previous && { ...previous, records: previous.records.filter(({ id }) => id !== record.id) })
+          setPrivateHistory((previous) => previous && { ...previous, records: previous.records.filter(({ id }) => id !== record.id) })
+          setRecords((previous) => previous.filter(({ id }) => id !== record.id))
+        } else {
+          const nextDraft = deletingOpenRecord && !editingHasChanges ? blankEvaluation() : form.getValues()
+          if (!commit({ draft: nextDraft, records: nextRecords, editingId: nextEditingId, thresholds })) return
+          setRecords(nextRecords)
+        }
+        if (deletingOpenRecord) {
+          setEditingId((previous) => previous === record.id ? null : previous)
+          if (JSON.stringify(form.getValues()) === JSON.stringify(record.evaluation)) form.reset(blankEvaluation())
+        }
         toast.success('Evaluation deleted')
       },
     })
   }
 
-  function keepLocalCopy(record: SavedEvaluation) {
-    if (localIds.has(record.id)) return true
-    const nextRecords = [record, ...records]
-    if (!commit({ draft: form.getValues(), records: nextRecords, editingId, thresholds })) return false
-    setRecords(nextRecords)
+  async function keepPrivateCopy(record: SavedEvaluation) {
+    if (privateHistory?.records.some(({ id }) => id === record.id)) return true
+    if (!portal || !await savePrivateEvaluations(portal.client, portal.userId, [record], 'preserve')) return false
+    setPrivateHistory((previous) => previous && { ...previous, records: [{ ...record, isPublic: false }, ...previous.records] })
     return true
   }
 
   function openRecord(record: SavedEvaluation, duplicate = false) {
     const open = () => {
+      nextEvaluationId.current = undefined
       form.reset(record.evaluation)
       setEditingId(duplicate ? null : record.id)
       window.location.hash = 'evaluation'
@@ -336,6 +390,13 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                 </Tooltip>
               </div>
             </div>
+            {(importFailed || privateHistory?.incomplete) && (
+              <div className="mb-3 flex flex-wrap items-center gap-2" role="status">
+                <p className="helper-text">{importFailed ? 'Some browser evaluations still need to sync.' : 'Some private evaluations could not be loaded.'}</p>
+                <Button type="button" variant="outline" size="sm" disabled={privatePending}
+                  onClick={() => setSyncRevision((previous) => previous + 1)}>Retry sync</Button>
+              </div>
+            )}
             {page === 'evaluation' && (
               <form id="evaluation-form" noValidate onSubmit={(event) => void form.handleSubmit(saveEvaluation, focusValidation)(event)}>
                 <p className="required-hint"><span className="required">*</span> Required field</p>
@@ -352,7 +413,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                           onClick={() => void form.handleSubmit((evaluation) => openPreview(evaluation, thresholds), focusValidation)()}>
                           <FileText /><span className="form-action-full">Preview Report</span><span className="form-action-short">Preview</span>
                         </Button>
-                        <Button type="submit" aria-label={editing ? 'Save Changes' : 'Save Evaluation'}>
+                        <Button type="submit" disabled={privatePending || isSubmitting} aria-label={editing ? 'Save Changes' : 'Save Evaluation'}>
                           <Save /><span className="form-action-full">{editing ? 'Save Changes' : 'Save Evaluation'}</span><span className="form-action-short">Save</span>
                         </Button>
                       </div>
@@ -362,20 +423,21 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                 </div>
               </form>
             )}
-            {page === 'history' && <>
-              {client && !sharedHistory && <p className="helper-text mb-3" role="status">Loading shared evaluations…</p>}
+            {(page === 'history' || page === 'analytics') && <>
+              {historyPending && <p className="helper-text mb-3" role="status">Loading evaluations…</p>}
               {sharedHistory?.incomplete && <p className="helper-text mb-3" role="status">Some shared evaluations could not be loaded.</p>}
-              {(!client || sharedHistory || history.length > 0) && <EvaluationHistory records={history} onEdit={openRecord}
+            </>}
+            {page === 'history' && (!historyPending || history.length > 0) && <EvaluationHistory records={history} onEdit={openRecord}
                 onDuplicate={(row) => openRecord(row, true)} onDelete={deleteEvaluation}
-                onShare={portal ? setSharing : undefined} onPreview={(row) => openPreview(row.evaluation, row.thresholds)}
+                onShare={portal && !privatePending ? setSharing : undefined} onPreview={(row) => openPreview(row.evaluation, row.thresholds)}
                 publication={client ? { publishedAt, complete: sharedHistory?.incomplete === false } : undefined}
                 onNew={() => { window.location.hash = 'evaluation' }} />}
-            </>}
+            {page === 'analytics' && !historyPending && <Analytics records={history} />}
             {page === 'settings' && <Settings thresholds={thresholds} onSave={saveThresholds} />}
           </main>
         </div>
       </div>
-      {portal && sharing && <ShareEvaluation client={portal.client} record={sharing} onBeforeUnpublish={() => keepLocalCopy(sharing)}
+      {portal && sharing && <ShareEvaluation client={portal.client} record={sharing} onBeforeUnpublish={() => keepPrivateCopy(sharing)}
         onUpdated={() => setPublicationRevision((previous) => previous + 1)}
         onClose={() => setSharing(null)} />}
       <ReportPreview report={report} onClose={() => {
