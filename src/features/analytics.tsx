@@ -1,10 +1,15 @@
+import { Download } from 'lucide-react'
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { assess, formatDate, recommendations, rubric, totalWeight } from '@/lib/evaluation'
 import type { SavedEvaluation } from '@/lib/evaluation'
+import { reportFilename } from '@/lib/report'
+import { loadReportFonts, ReportFontError } from '@/lib/report-font'
 import { loadDirectory } from '@/lib/storage'
 
 const monthsFormat = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -78,9 +83,10 @@ function BarChart({ title, values, max }: { title: string; values: Bar[]; max: n
   )
 }
 
-export default function Analytics({ records }: { records: SavedEvaluation[] }) {
+export default function Analytics({ records, incomplete }: { records: SavedEvaluation[]; incomplete: boolean }) {
   const [teacher, setTeacher] = useState<string | undefined>()
   const [month, setMonth] = useState('all')
+  const [exporting, setExporting] = useState(false)
   const [directory] = useState(() => loadDirectory('teacher'))
   const teachers = new Map(records.map(({ evaluation }) => [teacherKey(evaluation.candidate), evaluation.candidate]))
   for (const { name } of directory) teachers.set(teacherKey(name), name)
@@ -93,11 +99,38 @@ export default function Analytics({ records }: { records: SavedEvaluation[] }) {
     .map((record) => ({ ...record, result: assess(record.evaluation, record.thresholds) }))
   const count = matching.length
   const average = count ? matching.reduce((sum, { result }) => sum + result.score, 0) / count : 0
+  const scores = matching.map(({ id, evaluation, result }) => ({
+    id, date: evaluation.date, teacher: evaluation.candidate, module: evaluation.topic, score: result.score,
+  }))
+  const criteria = count ? rubric.map(({ id, label }, index) => {
+    const value = matching.reduce((sum, { result }) => sum + (result.breakdown[index].rating ?? 0), 0) / count
+    return { id, label, value, detail: `${value.toFixed(1)} / 5` }
+  }).sort((a, b) => a.value - b.value) : []
+  const distribution = recommendations.map((label) => {
+    const value = matching.filter(({ result }) => result.recommendation === label).length
+    return { id: label, label, value, detail: String(value) }
+  })
+
+  async function exportPdf() {
+    setExporting(true)
+    const teacherName = (selectedTeacher && teachers.get(selectedTeacher)) || 'All teachers'
+    const period = selectedMonth === 'all' ? 'All months' : monthLabel(selectedMonth)
+    try {
+      const [fonts, { createAnalyticsPdf }] = await Promise.all([loadReportFonts(), import('@/lib/export-analytics-pdf')])
+      const pdf = await createAnalyticsPdf({ teacher: teacherName, period, average, incomplete, scores, criteria, recommendations: distribution }, fonts)
+      pdf.save(reportFilename(`Analytics-${teacherName}-${period}`, 'pdf'))
+      toast.success('Analytics PDF downloaded')
+    } catch (error) {
+      toast.error(error instanceof ReportFontError ? error.message : 'Could not export analytics. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="grid gap-4">
       <Card className="workspace-card">
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
           <div className="field">
             <Label htmlFor="analytics-teacher">Teacher</Label>
             <Select value={selectedTeacher ? `teacher:${selectedTeacher}` : 'all'} onValueChange={(value) => {
@@ -122,6 +155,9 @@ export default function Analytics({ records }: { records: SavedEvaluation[] }) {
               </SelectContent>
             </Select>
           </div>
+          <Button type="button" variant="outline" disabled={!count || exporting} onClick={() => void exportPdf()}>
+            <Download aria-hidden="true" />{exporting ? 'Exporting…' : 'Export PDF'}
+          </Button>
         </CardContent>
       </Card>
       {count === 0 ? <div className="empty-state"><h2>No evaluations to chart yet</h2></div> : <>
@@ -133,18 +169,10 @@ export default function Analytics({ records }: { records: SavedEvaluation[] }) {
             </dl>
           </CardContent>
         </Card>
-        <ScoreChart key={`${selectedTeacher ?? ''}:${selectedMonth}`} values={matching.map(({ id, evaluation, result }) => ({
-          id, date: evaluation.date, teacher: evaluation.candidate, module: evaluation.topic, score: result.score,
-        }))} />
+        <ScoreChart key={`${selectedTeacher ?? ''}:${selectedMonth}`} values={scores} />
         <div className="grid gap-4 lg:grid-cols-2">
-          <BarChart title="Average rating by criterion" max={5} values={rubric.map(({ id, label }, index) => {
-            const value = matching.reduce((sum, { result }) => sum + (result.breakdown[index].rating ?? 0), 0) / count
-            return { id, label, value, detail: `${value.toFixed(1)} / 5` }
-          }).sort((a, b) => a.value - b.value)} />
-          <BarChart title="Recommendation breakdown" max={count} values={recommendations.map((label) => {
-            const value = matching.filter(({ result }) => result.recommendation === label).length
-            return { id: label, label, value, detail: String(value) }
-          })} />
+          <BarChart title="Average rating by criterion" max={5} values={criteria} />
+          <BarChart title="Recommendation breakdown" max={count} values={distribution} />
         </div>
       </>}
     </div>

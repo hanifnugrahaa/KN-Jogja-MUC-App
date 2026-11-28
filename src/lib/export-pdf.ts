@@ -1,33 +1,19 @@
-import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { UserOptions } from 'jspdf-autotable'
 import { brand } from './brand'
 import type { loadReportFonts } from './report-font'
-import { reportColumns, reportLogo } from './report'
+import { boldFont, createBrandedPdf, pdfMargin, regularFont } from './pdf-letterhead'
+import { reportColumns } from './report'
 import type { Report } from './report'
 
-const regularFont = 'SegoeUI'
-const boldFont = 'SegoeUI-Bold'
-
 export async function createPdf(report: Report, fonts: Awaited<ReturnType<typeof loadReportFonts>>) {
-  const doc = new jsPDF({ format: 'a4', compress: true, putOnlyUsedFonts: true })
-  for (const { filename, style, base64 } of fonts) {
-    doc.addFileToVFS(filename, base64)
-    doc.addFont(filename, style === 'bold' ? boldFont : regularFont, 'normal')
-  }
-  doc.setFont(regularFont, 'normal')
-  const logo = await reportLogo()
-  const margin = 17
+  const doc = await createBrandedPdf(brand.title, fonts)
+  const margin = pdfMargin
   const ink = '#' + brand.ink
   const muted = '#' + brand.muted
   const blue = '#' + brand.blue
   const border = '#' + brand.border
   const light = '#' + brand.light
-  doc.setProperties({ title: brand.title, author: brand.name })
-  doc.addImage(logo, 'PNG', margin, 12, 27, 27 / brand.logoRatio)
-  doc.setFontSize(9).setTextColor(muted).text(brand.letterhead, 193, 21, { align: 'right' })
-  doc.setDrawColor(blue).setLineWidth(0.36).line(margin, 29, 193, 29)
-  doc.setFont(boldFont, 'normal').setFontSize(17).setTextColor(ink).text(brand.title, margin, 41)
 
   const styles = { font: regularFont, fontSize: 9, cellPadding: 2.4, textColor: ink }
   const margins = { top: 17, right: margin, bottom: 21, left: margin }

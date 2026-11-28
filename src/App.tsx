@@ -435,7 +435,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; use
                 onNew={() => { window.location.hash = 'evaluation' }} />}
             {page === 'analytics' && !historyPending && (
               <Suspense fallback={<p className="helper-text" role="status">Loading analytics…</p>}>
-                <Analytics records={history} />
+                <Analytics records={history} incomplete={importFailed || !!privateHistory?.incomplete || !!sharedHistory?.incomplete} />
               </Suspense>
             )}
             {page === 'settings' && <Settings thresholds={thresholds} onSave={saveThresholds} />}
