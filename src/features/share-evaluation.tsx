@@ -6,8 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import type { SavedEvaluation } from '@/lib/evaluation'
 
-export function ShareEvaluation({ client, record, onBeforeUnpublish, onClose }: {
-  client: SupabaseClient; record: SavedEvaluation; onBeforeUnpublish: () => boolean; onClose: () => void
+export function ShareEvaluation({ client, record, onBeforeUnpublish, onUpdated, onClose }: {
+  client: SupabaseClient; record: SavedEvaluation; onBeforeUnpublish: () => boolean; onUpdated: () => void; onClose: () => void
 }) {
   const [includeNotes, setIncludeNotes] = useState(false)
   const [shared, setShared] = useState(false)
@@ -42,6 +42,7 @@ export function ShareEvaluation({ client, record, onBeforeUnpublish, onClose }: 
         })
       if (error) throw error
       toast.success(revoke ? 'Evaluation unpublished' : 'Evaluation published')
+      onUpdated()
       onClose()
     } catch {
       toast.error('Could not update sharing. Please try again.')

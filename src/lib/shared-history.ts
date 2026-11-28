@@ -3,13 +3,13 @@ import { recordSchema } from './evaluation'
 import type { SavedEvaluation } from './evaluation'
 
 export async function loadSharedHistory(client: SupabaseClient, signal: AbortSignal) {
-  const records: SavedEvaluation[] = []
+  const records: (SavedEvaluation & { isPublic: boolean })[] = []
   let incomplete = false
   let after: string | undefined
 
   for (;;) {
     const query = client.from('muc_shared_evaluations')
-      .select('id, shared_at, evaluation, thresholds').order('id').limit(200)
+      .select('id, shared_at, is_public, evaluation, thresholds').order('id').limit(200)
     const { data, error } = await (after ? query.gt('id', after) : query).abortSignal(signal)
     if (error) return { records, incomplete: true }
     if (!data.length) return { records, incomplete }
@@ -18,7 +18,7 @@ export async function loadSharedHistory(client: SupabaseClient, signal: AbortSig
       const parsed = recordSchema.safeParse({
         ...row, savedAt: new Date(row.shared_at).toJSON(),
       })
-      if (parsed.success) records.push(parsed.data)
+      if (parsed.success) records.push({ ...parsed.data, isPublic: row.is_public === true })
       else incomplete = true
     }
     after = data[data.length - 1].id

@@ -86,6 +86,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   const [{ workspace, error }] = useState(loadWorkspace)
   const [records, setRecords] = useState(workspace.records)
   const [sharedHistory, setSharedHistory] = useState<Awaited<ReturnType<typeof loadSharedHistory>>>()
+  const [publicationRevision, setPublicationRevision] = useState(0)
   const [editingId, setEditingId] = useState(workspace.editingId)
   const [thresholds, setThresholds] = useState(workspace.thresholds)
   const [page, setPage] = useState(currentPage)
@@ -104,6 +105,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   const localIds = new Set(records.map(({ id }) => id))
   const history = [...records, ...(sharedHistory?.records ?? []).filter(({ id }) => !localIds.has(id))]
     .sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+  const publishedAt = new Map(sharedHistory?.records.map(({ id, isPublic, savedAt }) => [id, isPublic ? savedAt : null]))
   const editing = history.find(({ id }) => id === editingId)
   const editingHasChanges = editing && JSON.stringify(draft) !== JSON.stringify(editing.evaluation)
   const client = portal?.client
@@ -117,7 +119,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
       }
     })
     return () => controller.abort()
-  }, [client])
+  }, [client, publicationRevision])
 
   useEffect(() => {
     function navigate() {
@@ -366,6 +368,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
               {(!client || sharedHistory || history.length > 0) && <EvaluationHistory records={history} onEdit={openRecord}
                 onDuplicate={(row) => openRecord(row, true)} onDelete={deleteEvaluation}
                 onShare={portal ? setSharing : undefined} onPreview={(row) => openPreview(row.evaluation, row.thresholds)}
+                publication={client ? { publishedAt, complete: sharedHistory?.incomplete === false } : undefined}
                 onNew={() => { window.location.hash = 'evaluation' }} />}
             </>}
             {page === 'settings' && <Settings thresholds={thresholds} onSave={saveThresholds} />}
@@ -373,6 +376,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
         </div>
       </div>
       {portal && sharing && <ShareEvaluation client={portal.client} record={sharing} onBeforeUnpublish={() => keepLocalCopy(sharing)}
+        onUpdated={() => setPublicationRevision((previous) => previous + 1)}
         onClose={() => setSharing(null)} />}
       <ReportPreview report={report} onClose={() => {
         previewRequest.current++

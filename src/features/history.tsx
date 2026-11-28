@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Copy, FileSearch, History, Pencil, Search, Share2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,10 @@ import { ResultFiltersDialog, ResultSortHeading } from './result-controls'
 import type { ResultFilters, ResultSort, ResultSortColumn } from './result-controls'
 
 export const PUBLIC_PAGE_SIZE = 5
+
+const publicationTime = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta', hourCycle: 'h23',
+})
 
 type PublicControls = {
   query: string; filters: ResultFilters; sort: ResultSort; page: number; total: number; pending: boolean
@@ -26,9 +31,10 @@ function pageItems(page: number, pages: number): (number | 'start' | 'end')[] {
   return [1, 'start', page, 'end', pages]
 }
 
-export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onDelete, onNew, onShare, publicControls }: {
+export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onDelete, onNew, onShare, publication, publicControls }: {
   records: SavedEvaluation[]; onEdit?: (row: SavedEvaluation) => void; onDuplicate?: (row: SavedEvaluation) => void
   onPreview: (row: SavedEvaluation) => void; onDelete?: (row: SavedEvaluation) => void; onNew?: () => void; onShare?: (row: SavedEvaluation) => void; publicControls?: PublicControls
+  publication?: { publishedAt: ReadonlyMap<string, string | null>; complete: boolean }
 }) {
   const [localQuery, setLocalQuery] = useState('')
   const query = publicControls?.query ?? localQuery
@@ -62,7 +68,9 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
                   <ResultSortHeading column="date" label="Evaluation Date" shortLabel="Date" sort={publicControls.sort} onSort={publicControls.onSort} />
                   <ResultSortHeading column="score" label="Score" sort={publicControls.sort} onSort={publicControls.onSort} />
                 </> : <>
-                  <TableHead>Candidate / Topic</TableHead><TableHead>Evaluation Date</TableHead><TableHead>Score</TableHead>
+                  <TableHead>Candidate / Topic</TableHead>
+                  {publication && <TableHead>Publication</TableHead>}
+                  <TableHead>Evaluation Date</TableHead><TableHead>Score</TableHead>
                 </>}
                 <TableHead>Recommendation</TableHead>
                 <TableHead className="text-right"><span className={publicControls ? 'public-actions-label' : undefined}>Actions</span></TableHead>
@@ -72,9 +80,18 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
               {matches.map((record) => {
                 const { evaluation } = record
                 const result = assess(evaluation, record.thresholds)
+                const updatedAt = publication?.publishedAt.get(record.id)
                 return (
                   <TableRow key={record.id}>
                     <TableCell><strong>{evaluation.candidate}</strong><div className="table-subtitle">{evaluation.topic}</div></TableCell>
+                    {publication && <TableCell className="whitespace-normal">
+                      {updatedAt ? <>
+                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-800">Published</Badge>
+                        <div className="table-subtitle">
+                          Updated <time dateTime={updatedAt} className="whitespace-nowrap">{publicationTime.format(new Date(updatedAt))} WIB</time>
+                        </div>
+                      </> : <Badge variant="outline">{updatedAt === null || publication.complete ? 'Private' : 'Status unavailable'}</Badge>}
+                    </TableCell>}
                     <TableCell>{formatDate(evaluation.date)}<div className="table-subtitle">{evaluation.branch}</div></TableCell>
                     <TableCell><span className="history-score"><strong>{result.score}</strong><small>/100</small></span></TableCell>
                     <TableCell><RecommendationBadge value={result.recommendation} /></TableCell>
