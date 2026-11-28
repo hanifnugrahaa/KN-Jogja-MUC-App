@@ -6,8 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import type { SavedEvaluation } from '@/lib/evaluation'
 
-export function ShareEvaluation({ client, record, onClose }: {
-  client: SupabaseClient; record: SavedEvaluation; onClose: () => void
+export function ShareEvaluation({ client, record, onBeforeUnpublish, onClose }: {
+  client: SupabaseClient; record: SavedEvaluation; onBeforeUnpublish: () => boolean; onClose: () => void
 }) {
   const [includeNotes, setIncludeNotes] = useState(false)
   const [shared, setShared] = useState(false)
@@ -30,6 +30,7 @@ export function ShareEvaluation({ client, record, onClose }: {
   }, [client, record.id])
 
   async function update(revoke: boolean) {
+    if (revoke && !onBeforeUnpublish()) return
     setBusy(true)
     try {
       const { error } = revoke

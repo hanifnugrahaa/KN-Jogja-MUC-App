@@ -41,7 +41,7 @@ export function EvaluationHistory({ records, onEdit, onDuplicate, onPreview, onD
   return (
     <Card className="workspace-card history-card">
       <CardHeader className="history-tools">
-        <CardTitle>Published Evaluations</CardTitle>
+        <CardTitle>{publicControls ? 'Published Evaluations' : 'Saved Evaluations'}</CardTitle>
         <div className={publicControls ? 'public-results-tools' : undefined}>
           <div className="search">
             <Search size={17} />

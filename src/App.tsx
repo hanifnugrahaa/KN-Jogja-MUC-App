@@ -28,6 +28,7 @@ import type { Evaluation, SavedEvaluation, Thresholds } from '@/lib/evaluation'
 import { reportData } from '@/lib/report'
 import type { Report } from '@/lib/report'
 import { loadLocalSignature, loadPublishedSignature } from '@/lib/report-signature'
+import { loadSharedHistory } from '@/lib/shared-history'
 import { loadWorkspace, saveWorkspace } from '@/lib/storage'
 
 const pages = {
@@ -84,6 +85,7 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   const [sharing, setSharing] = useState<SavedEvaluation | null>(null)
   const [{ workspace, error }] = useState(loadWorkspace)
   const [records, setRecords] = useState(workspace.records)
+  const [sharedHistory, setSharedHistory] = useState<Awaited<ReturnType<typeof loadSharedHistory>>>()
   const [editingId, setEditingId] = useState(workspace.editingId)
   const [thresholds, setThresholds] = useState(workspace.thresholds)
   const [page, setPage] = useState(currentPage)
@@ -94,12 +96,28 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   const lastSaved = useRef(JSON.stringify(workspace))
   const focusAfterClose = useRef<HTMLElement | null>(null)
   const previewRequest = useRef(0)
+  const deletedRecords = useRef(new Set<string>())
   const mobileMenu = useRef<HTMLButtonElement>(null)
   const form = useForm<Evaluation>({ defaultValues: workspace.draft, resolver: zodResolver(evaluationSchema) })
   const draft = useWatch({ control: form.control, compute: (values: Evaluation) => values })
   const result = assess(draft, thresholds)
-  const editing = records.find(({ id }) => id === editingId)
+  const localIds = new Set(records.map(({ id }) => id))
+  const history = [...records, ...(sharedHistory?.records ?? []).filter(({ id }) => !localIds.has(id))]
+    .sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+  const editing = history.find(({ id }) => id === editingId)
   const editingHasChanges = editing && JSON.stringify(draft) !== JSON.stringify(editing.evaluation)
+  const client = portal?.client
+
+  useEffect(() => {
+    if (!client) return
+    const controller = new AbortController()
+    void loadSharedHistory(client, controller.signal).then((shared) => {
+      if (!controller.signal.aborted) {
+        setSharedHistory({ ...shared, records: shared.records.filter(({ id }) => !deletedRecords.current.has(id)) })
+      }
+    })
+    return () => controller.abort()
+  }, [client])
 
   useEffect(() => {
     function navigate() {
@@ -202,12 +220,14 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
   function deleteEvaluation(record: SavedEvaluation) {
     confirm({
       title: 'Delete this evaluation?',
-      description: 'The saved evaluation for ' + record.evaluation.candidate + ' will be permanently removed from this browser.' + (portal ? ' Any shared or published copy will also be removed.' : ''),
+      description: 'The saved evaluation for ' + record.evaluation.candidate + ' will be removed from your history.' + (portal ? ' Any shared or published copy will also be removed.' : ''),
       action: 'Delete evaluation',
       run: async () => {
         if (portal) {
           const { error } = await portal.client.from('muc_shared_evaluations').delete().eq('id', record.id)
           if (error) { toast.error('Could not remove the published or shared copy. The evaluation was kept.'); return }
+          deletedRecords.current.add(record.id)
+          setSharedHistory((previous) => previous && { ...previous, records: previous.records.filter(({ id }) => id !== record.id) })
         }
         const nextRecords = records.filter(({ id }) => record.id !== id)
         const nextEditingId = editingId === record.id ? null : editingId
@@ -219,6 +239,14 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
         toast.success('Evaluation deleted')
       },
     })
+  }
+
+  function keepLocalCopy(record: SavedEvaluation) {
+    if (localIds.has(record.id)) return true
+    const nextRecords = [record, ...records]
+    if (!commit({ draft: form.getValues(), records: nextRecords, editingId, thresholds })) return false
+    setRecords(nextRecords)
+    return true
   }
 
   function openRecord(record: SavedEvaluation, duplicate = false) {
@@ -332,14 +360,20 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; sig
                 </div>
               </form>
             )}
-            {page === 'history' && <EvaluationHistory records={records} onEdit={openRecord} onDuplicate={(row) => openRecord(row, true)}
-              onDelete={deleteEvaluation} onShare={portal ? setSharing : undefined} onPreview={(row) => openPreview(row.evaluation, row.thresholds)}
-              onNew={() => { window.location.hash = 'evaluation' }} />}
+            {page === 'history' && <>
+              {client && !sharedHistory && <p className="helper-text mb-3" role="status">Loading shared evaluations…</p>}
+              {sharedHistory?.incomplete && <p className="helper-text mb-3" role="status">Some shared evaluations could not be loaded.</p>}
+              {(!client || sharedHistory || history.length > 0) && <EvaluationHistory records={history} onEdit={openRecord}
+                onDuplicate={(row) => openRecord(row, true)} onDelete={deleteEvaluation}
+                onShare={portal ? setSharing : undefined} onPreview={(row) => openPreview(row.evaluation, row.thresholds)}
+                onNew={() => { window.location.hash = 'evaluation' }} />}
+            </>}
             {page === 'settings' && <Settings thresholds={thresholds} onSave={saveThresholds} />}
           </main>
         </div>
       </div>
-      {portal && sharing && <ShareEvaluation client={portal.client} record={sharing} onClose={() => setSharing(null)} />}
+      {portal && sharing && <ShareEvaluation client={portal.client} record={sharing} onBeforeUnpublish={() => keepLocalCopy(sharing)}
+        onClose={() => setSharing(null)} />}
       <ReportPreview report={report} onClose={() => {
         previewRequest.current++
         setReport(null)
