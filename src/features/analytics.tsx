@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -7,10 +8,52 @@ import type { SavedEvaluation } from '@/lib/evaluation'
 import { loadDirectory } from '@/lib/storage'
 
 const monthsFormat = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+const axisDateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const monthLabel = (month: string) => monthsFormat.format(new Date(`${month}-01T00:00:00Z`))
 const teacherKey = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase()
 
 type Bar = { id: string; label: string; value: number; detail: string }
+type ScorePoint = { id: string; date: string; teacher: string; module: string; score: number }
+
+function ScoreChart({ values }: { values: ScorePoint[] }) {
+  const points = new Map(values.map((point) => [point.id, point]))
+  return (
+    <Card className="workspace-card min-w-0">
+      <CardHeader><CardTitle><h2 id="analytics-score-title">Scores by evaluation date</h2></CardTitle></CardHeader>
+      <CardContent>
+        <div className="h-60 min-w-0 sm:h-72" role="group" aria-labelledby="analytics-score-title">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <LineChart data={values} margin={{ top: 8, right: 12, bottom: 0, left: 0 }} accessibilityLayer
+              title="Evaluation scores out of 100" desc="Each point is one evaluation. Use the left and right arrow keys to read the scores.">
+              <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 4" />
+              <XAxis dataKey="id" axisLine={false} tickLine={false} tickMargin={8} minTickGap={22} interval="preserveStartEnd"
+                padding={{ left: 10, right: 10 }} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                tickFormatter={(id: string) => {
+                  const point = points.get(id)
+                  return point ? axisDateFormat.format(new Date(`${point.date}T00:00:00Z`)) : ''
+                }} />
+              <YAxis domain={[0, totalWeight]} ticks={[0, 25, 50, 75, 100]} width={34} axisLine={false} tickLine={false} tickMargin={5}
+                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
+              <Tooltip
+                trigger={window.matchMedia('(hover: none)').matches ? 'click' : 'hover'}
+                defaultIndex={values.length === 1 ? 0 : undefined} isAnimationActive={false}
+                cursor={{ stroke: 'var(--border)' }}
+                contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: 6, fontSize: 12, whiteSpace: 'normal', maxWidth: 200 }}
+                labelFormatter={(id) => {
+                  const point = points.get(String(id))
+                  return point && <>{formatDate(point.date)}<br />{point.teacher} · {point.module}</>
+                }}
+                formatter={(value) => [`${value} / ${totalWeight}`, 'Score']} />
+              <Line type="linear" dataKey="score" stroke="var(--primary)" strokeWidth={2.5}
+                dot={values.length <= 36 ? { r: 3.5, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 1 } : false}
+                activeDot={{ r: 5 }} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 function BarChart({ title, values, max }: { title: string; values: Bar[]; max: number }) {
   return (
@@ -35,7 +78,7 @@ function BarChart({ title, values, max }: { title: string; values: Bar[]; max: n
   )
 }
 
-export function Analytics({ records }: { records: SavedEvaluation[] }) {
+export default function Analytics({ records }: { records: SavedEvaluation[] }) {
   const [teacher, setTeacher] = useState<string | undefined>()
   const [month, setMonth] = useState('all')
   const [directory] = useState(() => loadDirectory('teacher'))
@@ -90,9 +133,8 @@ export function Analytics({ records }: { records: SavedEvaluation[] }) {
             </dl>
           </CardContent>
         </Card>
-        <BarChart title="Scores by evaluation date" max={totalWeight} values={matching.map(({ id, evaluation, result }) => ({
-          id, label: `${formatDate(evaluation.date)} · ${selectedTeacher ? evaluation.topic : evaluation.candidate}`,
-          value: result.score, detail: `${result.score} / ${totalWeight}`,
+        <ScoreChart key={`${selectedTeacher ?? ''}:${selectedMonth}`} values={matching.map(({ id, evaluation, result }) => ({
+          id, date: evaluation.date, teacher: evaluation.candidate, module: evaluation.topic, score: result.score,
         }))} />
         <div className="grid gap-4 lg:grid-cols-2">
           <BarChart title="Average rating by criterion" max={5} values={rubric.map(({ id, label }, index) => {

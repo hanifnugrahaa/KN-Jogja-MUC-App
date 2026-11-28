@@ -5,7 +5,7 @@ import {
   ChartNoAxesColumnIncreasing, ChevronRight, ClipboardCheck, HardDrive, FilePlus2, FileText, Globe, History, Info, LayoutGrid, LogOut,
   Menu, RotateCcw, Save, Settings2,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import {
@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Toaster } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Analytics } from '@/features/analytics'
 import { EvaluationForm } from '@/features/evaluation-form'
 import { EvaluationHistory } from '@/features/history'
 import { ReportPreview } from '@/features/report-preview'
@@ -31,6 +30,8 @@ import type { Report } from '@/lib/report'
 import { loadLocalSignature, loadPublishedSignature } from '@/lib/report-signature'
 import { loadEvaluationHistory, savePrivateEvaluations } from '@/lib/shared-history'
 import { loadWorkspace, saveWorkspace } from '@/lib/storage'
+
+const Analytics = lazy(() => import('@/features/analytics'))
 
 const pages = {
   evaluation: { label: 'New Evaluation', icon: FilePlus2, description: 'Assess a coding teacher candidate’s live MUC session.' },
@@ -432,7 +433,11 @@ export default function App({ portal }: { portal?: { client: SupabaseClient; use
                 onShare={portal && !privatePending ? setSharing : undefined} onPreview={(row) => openPreview(row.evaluation, row.thresholds)}
                 publication={client ? { publishedAt, complete: sharedHistory?.incomplete === false } : undefined}
                 onNew={() => { window.location.hash = 'evaluation' }} />}
-            {page === 'analytics' && !historyPending && <Analytics records={history} />}
+            {page === 'analytics' && !historyPending && (
+              <Suspense fallback={<p className="helper-text" role="status">Loading analytics…</p>}>
+                <Analytics records={history} />
+              </Suspense>
+            )}
             {page === 'settings' && <Settings thresholds={thresholds} onSave={saveThresholds} />}
           </main>
         </div>
