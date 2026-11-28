@@ -171,7 +171,7 @@
 .page-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 26px; }
 .page-heading h1 { font: 780 clamp(1.85rem,2.8vw,2.5rem)/1.15 var(--font-heading); letter-spacing: -.045em; }
 .form-actions button, .settings-actions button, .preview-actions button, .empty-state button { min-height: 41px; padding-inline: 13px; gap: 8px; font-weight: 640; }
-.form-actions [data-variant="outline"], .date-trigger { background: var(--card); }
+.form-actions [data-variant="outline"], .detail-trigger { background: var(--card); }
 
 .evaluation-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 31%); align-items: start; gap: 22px; }
 .form-column { min-width: 0; }
@@ -191,12 +191,12 @@
 .field { min-width: 0; display: grid; align-content: start; gap: 7px; }
 .field label { gap: 4px; }
 .required { color: var(--destructive); }
-.field input, .date-trigger, .search input, .threshold-row input {
+.field input, .detail-trigger, .search input, .threshold-row input {
   height: 40px; border-color: var(--input); border-radius: .4rem; padding-inline: 11px; font-size: .875rem;
 }
-.field input[aria-invalid="true"], .date-trigger[aria-invalid="true"] { border-color: var(--destructive); }
-.date-trigger { width: 100%; justify-content: flex-start; gap: 8px; font-weight: 450; }
-.date-trigger svg { color: var(--muted-foreground); }
+.field input[aria-invalid="true"], .detail-trigger[aria-invalid="true"] { border-color: var(--destructive); }
+.detail-trigger { width: 100%; justify-content: flex-start; gap: 8px; font-weight: 450; }
+.detail-trigger svg { color: var(--muted-foreground); }
 .field-error { font-size: .8rem; color: var(--destructive); }
 .rubric-error { margin-top: 10px; }
 
@@ -376,7 +376,7 @@
   .page-heading { align-items: flex-start; flex-direction: column; gap: 13px; margin-bottom: 16px; }
   .workspace-card { --card-spacing: 15px; }
   .details-grid { gap: 12px; }
-  .field input, .date-trigger, .notes-input { font-size: 1rem; }
+  .field input, .detail-trigger, .notes-input { font-size: 1rem; }
   .rubric-head, .rubric-row > .weight { display: none; }
   .rubric-row { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 0; row-gap: 5px; }
   .criterion-name { grid-column: 1 / -1; }

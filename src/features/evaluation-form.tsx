@@ -15,11 +15,12 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { assess, detailFields, formatDate, localDate, ratingLabels } from '@/lib/evaluation'
 import type { Evaluation } from '@/lib/evaluation'
+import { TeacherField } from './teacher-field'
 
 type Props = { form: UseFormReturn<Evaluation>; result: ReturnType<typeof assess>; notes: string }
 
 const calendarEnd = new Date(new Date().getFullYear() + 10, 11)
-const placeholders = { candidate: 'e.g. Mr Ahsan', topic: 'e.g. Python First', evaluator: 'e.g. Mr Hanif', branch: 'e.g. Yogyakarta', date: '' }
+const placeholders = { topic: 'e.g. Python First', evaluator: 'e.g. Mr Hanif', branch: 'e.g. Yogyakarta' }
 
 function DateField({ value, onChange, onBlur, invalid }: {
   value: string; onChange: (date: string) => void; onBlur: () => void; invalid: boolean
@@ -30,7 +31,7 @@ function DateField({ value, onChange, onBlur, invalid }: {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button id="field-date" type="button" variant="outline" className="date-trigger" aria-invalid={invalid}
+        <Button id="field-date" type="button" variant="outline" className="detail-trigger" aria-invalid={invalid}
           aria-describedby={invalid ? 'error-date' : undefined} onBlur={onBlur}>
           <CalendarDays aria-hidden="true" />
           {date ? formatDate(value) : 'Select a date'}
@@ -86,7 +87,11 @@ export function EvaluationForm({ form, result, notes }: Props) {
           {detailFields.map(([name, label]) => (
             <div className="field" key={name}>
               <Label htmlFor={'field-' + name}>{label} <span className="required" aria-hidden="true">*</span></Label>
-              {name === 'date' ? (
+              {name === 'candidate' ? (
+                <Controller name="candidate" control={control} render={({ field }) => (
+                  <TeacherField value={field.value} onChange={field.onChange} onBlur={field.onBlur} inputRef={field.ref} invalid={!!errors.candidate} />
+                )} />
+              ) : name === 'date' ? (
                 <Controller name="date" control={control} render={({ field }) => (
                   <DateField value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.date} />
                 )} />
